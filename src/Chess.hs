@@ -51,7 +51,9 @@ type Board = Array Position (Maybe Piece)
 
 type Player = Color
 
-type GameState = State Player Board
+type History = [MoveC]
+
+type GameState = State (Player, History) Board
 
 data Result = BlackWin | WhiteWin | Draw | None deriving (Show, Eq)
 
@@ -95,7 +97,7 @@ initBoard = do
             ]
               ++ [((x, y), Nothing) | x <- ['a' .. 'h'], y <- [3 .. 6]]
           )
-  put W
+  put (W, [])
   return board
 
 -- | construct a board from a list of pieces and a current player
