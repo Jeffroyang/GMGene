@@ -1,6 +1,6 @@
 module Main where
 
-import ChessGame
+import PlayChess
 
 main :: IO ()
 main = playGame

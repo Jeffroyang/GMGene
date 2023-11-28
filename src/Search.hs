@@ -20,6 +20,7 @@ generateTree = undefined
 dfs :: (Game g) => Int -> g -> Move g
 dfs d g = undefined
 
+-- | Iteratively deepens the dfs search until a certain depth
 iterativeDeepeningSearch :: (Game g) => Int -> g -> Move g
 iterativeDeepeningSearch d g = undefined
 

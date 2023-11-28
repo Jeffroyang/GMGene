@@ -98,7 +98,8 @@ initBoard = do
   put W
   return board
 
-constructBoard :: [(Position, Piece)] -> Color -> GameState
+-- | construct a board from a list of pieces and a current player
+constructBoard :: [(Position, Piece)] -> Player -> GameState
 constructBoard = undefined
 
 -- | checks validity of move then moves piece and updates board

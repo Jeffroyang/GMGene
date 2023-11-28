@@ -1,4 +1,4 @@
-module ChessGame where
+module PlayChess where
 
 import Chess
 import Search
