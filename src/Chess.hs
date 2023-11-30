@@ -163,7 +163,7 @@ genPsuedoMovesPos board c pos@(f, r) = case board ! pos of
         -- TODO: en passant
         Pawn ->
           map (MoveC p pos) (filter (\x -> onBoard x && takeable x) [(f + 1, r + forward), (f - 1, r + forward)])
-            ++ map (MoveC p pos) ([f1 | onBoard f1, isNothing (board ! f1)] ++ [f2 | onBoard f2, isNothing (board ! f2), isNothing (board ! f1)])
+            ++ map (MoveC p pos) ([f1 | onBoard f1, isNothing (board ! f1)] ++ [f2 | onBoard f2, isNothing (board ! f2), isNothing (board ! f1), if c == W then r == 2 else r == 7])
           where
             f1 = (f, r + forward)
             f2 = (f, r + 2 * forward)
@@ -205,6 +205,12 @@ genPsuedoMoves board c = concatMap (genPsuedoMovesPos board c) (indices board)
 -- generate all legal moves for a color in a position
 genMovesChess :: Board -> Color -> [MoveC]
 genMovesChess board c = concatMap (filter (\m@(MoveC p from to) -> not $ inCheck (board // [(from, Nothing), (to, Just p)]) c) . genPsuedoMovesPos board c) (indices board)
+
+onepiece :: Board
+onepiece = array ((1, 1), (8, 8)) [((x, y), Nothing) | x <- [1 .. 8], y <- [1 .. 8]] // [((5, 2), Just (Piece Pawn W))]
+
+-- >>> genMovesChess onepiece W
+-- []
 
 instance S.Game GameState where
   type Move GameState = MoveC
