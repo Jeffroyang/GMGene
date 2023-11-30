@@ -48,7 +48,7 @@ data MoveC
       { piece :: Piece,
         from :: Position,
         to :: Position
-      }
+      } -- standard move or take
   | ShortCastle Color -- O-O
   | LongCastle Color -- O-O-O
   | Promotion {piece :: Piece, from :: Position, to :: Position} -- pawn promotion to piece at position (to) from position (from) (assumed pawn)
@@ -128,7 +128,14 @@ onBoard (x, y) = inRange ((1, 1), (8, 8)) (x, y)
 inCheck :: Board -> Color -> History -> Bool
 inCheck board c h =
   let kingPos = head $ map fst $ filter (\(_, p) -> p == Just (Piece King c)) (assocs board)
-   in kingPos `elem` map (\m@(SMoveC _ _ to) -> to) (genPsuedoMoves board (if c == W then B else W) h)
+   in kingPos
+        `elem` map
+          ( \case
+              SMoveC _ _ to -> to
+              Promotion _ _ to -> to
+              _ -> (0, 0) -- dummy value for other possible enemy moves since they dont attack
+          )
+          (genPsuedoMoves board (if c == W then B else W) h)
 
 -- | display the board
 showBoard :: Board -> String
@@ -189,7 +196,7 @@ genPsuedoMovesPos board c h pos@(f, r) = case board ! pos of
                            SMoveC (Piece Pawn c2) from to -> c2 /= c && from == (tx, ty + forward) && to == (tx, ty - forward)
                            _ -> False
                        )
-            -- expand moves that
+            -- expand moves that promote(only standard moves, en passant does not go to last rank)
             expandPromotionMoves :: MoveC -> [MoveC]
             expandPromotionMoves m@(SMoveC p@(Piece Pawn c) from to@(x, y)) =
               if (c == W && y == 8) || (c == B && y == 1)
