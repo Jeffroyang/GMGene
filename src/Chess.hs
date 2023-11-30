@@ -15,7 +15,7 @@ module Chess
     validMove,
     gameOver,
     onBoard,
-    squareSafe,
+    inCheck,
     showBoard,
     constructBoard,
     generateMoves,
@@ -26,13 +26,15 @@ where
 import Control.Monad.State.Lazy
 import Data.Array
 import Data.Ix
+import Data.Maybe
 import Search qualified as S
 
 data Color = B | W deriving (Show, Eq)
 
 data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq)
 
-type Position = (Char, Int)
+-- files are represented as ints 1-8 as well for easier translation
+type Position = (Int, Int)
 
 data Piece = Piece
   { pieceType :: PieceType,
@@ -61,41 +63,27 @@ initBoard :: GameState
 initBoard = do
   let board =
         array
-          (('a', 1), ('h', 8))
-          ( [ (('a', 1), Just (Piece Rook W)),
-              (('b', 1), Just (Piece Knight W)),
-              (('c', 1), Just (Piece Bishop W)),
-              (('d', 1), Just (Piece Queen W)),
-              (('e', 1), Just (Piece King W)),
-              (('f', 1), Just (Piece Bishop W)),
-              (('g', 1), Just (Piece Knight W)),
-              (('h', 1), Just (Piece Rook W)),
-              (('a', 2), Just (Piece Pawn W)),
-              (('b', 2), Just (Piece Pawn W)),
-              (('c', 2), Just (Piece Pawn W)),
-              (('d', 2), Just (Piece Pawn W)),
-              (('e', 2), Just (Piece Pawn W)),
-              (('f', 2), Just (Piece Pawn W)),
-              (('g', 2), Just (Piece Pawn W)),
-              (('h', 2), Just (Piece Pawn W)),
-              (('a', 7), Just (Piece Pawn B)),
-              (('b', 7), Just (Piece Pawn B)),
-              (('c', 7), Just (Piece Pawn B)),
-              (('d', 7), Just (Piece Pawn B)),
-              (('e', 7), Just (Piece Pawn B)),
-              (('f', 7), Just (Piece Pawn B)),
-              (('g', 7), Just (Piece Pawn B)),
-              (('h', 7), Just (Piece Pawn B)),
-              (('a', 8), Just (Piece Rook B)),
-              (('b', 8), Just (Piece Knight B)),
-              (('c', 8), Just (Piece Bishop B)),
-              (('d', 8), Just (Piece Queen B)),
-              (('e', 8), Just (Piece King B)),
-              (('f', 8), Just (Piece Bishop B)),
-              (('g', 8), Just (Piece Knight B)),
-              (('h', 8), Just (Piece Rook B))
+          ((1, 1), (8, 8))
+          ( [ ((1, 1), Just (Piece Rook W)),
+              ((2, 1), Just (Piece Knight W)),
+              ((3, 1), Just (Piece Bishop W)),
+              ((4, 1), Just (Piece Queen W)),
+              ((5, 1), Just (Piece King W)),
+              ((6, 1), Just (Piece Bishop W)),
+              ((7, 1), Just (Piece Knight W)),
+              ((8, 1), Just (Piece Rook W)),
+              ((1, 8), Just (Piece Rook B)),
+              ((2, 8), Just (Piece Knight B)),
+              ((3, 8), Just (Piece Bishop B)),
+              ((4, 8), Just (Piece Queen B)),
+              ((5, 8), Just (Piece King B)),
+              ((6, 8), Just (Piece Bishop B)),
+              ((7, 8), Just (Piece Knight B)),
+              ((8, 8), Just (Piece Rook B))
             ]
-              ++ [((x, y), Nothing) | x <- ['a' .. 'h'], y <- [3 .. 6]]
+              ++ [((x, 2), Just (Piece Pawn W)) | x <- [1 .. 8]]
+              ++ [((x, 7), Just (Piece Pawn B)) | x <- [1 .. 8]]
+              ++ [((x, y), Nothing) | x <- [1 .. 8], y <- [3 .. 6]]
           )
   put (W, [])
   return board
@@ -104,13 +92,24 @@ initBoard = do
 constructBoard :: [(Position, Piece)] -> Player -> GameState
 constructBoard = undefined
 
--- | checks validity of move then moves piece and updates board
+-- | checks validity of move then moves piece and updates board, else returns same board
 move :: GameState -> MoveC -> GameState
-move board = undefined
+move state m = do
+  (player, history) <- get
+  board <- state
+
+  if validMove board player m
+    then do
+      put (if player == W then B else W, m : history)
+      -- TODO account for en passant and castling
+      -- en passant removes pawn not at destination, castling moves rook as well
+      return $ board // [(to m, Just (piece m)), (from m, Nothing)]
+    else state
 
 -- | returns whether a move is valid
-validMove :: GameState -> MoveC -> Bool
-validMove = undefined
+-- TODO account for en passant, castling, promotions
+validMove :: Board -> Color -> MoveC -> Bool
+validMove board c m@(MoveC piece@(Piece pt pc) from@(x, y) to@(x', y')) = m `elem` genMovesChess board c
 
 -- | checks if the current player's king is mated
 gameOver :: GameState -> Bool
@@ -118,11 +117,13 @@ gameOver = undefined
 
 -- | returns whether a position is on the board
 onBoard :: Position -> Bool
-onBoard (x, y) = inRange (('a', 1), ('h', 8)) (x, y)
+onBoard (x, y) = inRange ((1, 1), (8, 8)) (x, y)
 
--- | returns whether a position is safe(not under attack) for a given color
-squareSafe :: Board -> Color -> Position -> Bool
-squareSafe = undefined
+-- | returns whether in a position the king is under attack for a given color
+inCheck :: Board -> Color -> Bool
+inCheck board c =
+  let kingPos = head $ map fst $ filter (\(_, p) -> p == Just (Piece King c)) (assocs board)
+   in kingPos `elem` map (\m@(MoveC _ _ to) -> to) (genPsuedoMoves board (if c == W then B else W))
 
 -- | display the board
 showBoard :: Board -> String
@@ -136,9 +137,74 @@ checkResult = undefined
 evaluate :: GameState -> Int
 evaluate = undefined
 
--- | generate all possible moves for a given position
+-- | generate all possible moves for a given position (INTERFACE WRAPPER)
 generateMoves :: GameState -> [MoveC]
 generateMoves = undefined
+
+-- generate all reachable positions from a position along a translation dir
+accReachable :: Color -> Board -> Position -> (Int, Int) -> [Position] -> [Position]
+accReachable c board src@(x, y) translate@(x', y') acc =
+  let pos = (x + x', y + y')
+   in if onBoard pos
+        then case board ! pos of
+          Nothing -> accReachable c board pos translate (pos : acc)
+          Just (Piece _ c2) -> if c == c2 then acc else pos : acc
+        else acc
+
+-- | generate all psuedo legal moves for a given position
+genPsuedoMovesPos :: Board -> Color -> Position -> [MoveC]
+genPsuedoMovesPos board c pos@(f, r) = case board ! pos of
+  Nothing -> []
+  Just p@(Piece pt pc) ->
+    if pc /= c
+      then []
+      else case pt of
+        -- check normal 1 sq move, 2 sq move(if on starting sq), and takeable diagonals
+        -- TODO: en passant
+        Pawn ->
+          map (MoveC p pos) (filter (\x -> onBoard x && takeable x) [(f + 1, r + forward), (f - 1, r + forward)])
+            ++ map (MoveC p pos) ([f1 | onBoard f1, isNothing (board ! f1)] ++ [f2 | onBoard f2, isNothing (board ! f2), isNothing (board ! f1)])
+          where
+            f1 = (f, r + forward)
+            f2 = (f, r + 2 * forward)
+            takeable :: Position -> Bool
+            takeable pos =
+              let qp = board ! pos
+               in onBoard pos && isJust qp && pieceColor (fromJust qp) /= c
+        -- knight just translate all possible and filter out invalid
+        Knight ->
+          map (MoveC p pos) $
+            filter (\x -> onBoard x && notBlocked x) $
+              map (translate pos) [(-2, -1), (-1, -2), (1, -2), (2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1)]
+        -- for straight sliding pieces, generate all reachable positions along a translation dir
+        Bishop -> reachable [(1, 1), (-1, 1), (1, -1), (-1, -1)]
+        Rook -> reachable [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        Queen -> reachable [(1, 1), (-1, 1), (1, -1), (-1, -1), (1, 0), (-1, 0), (0, 1), (0, -1)]
+        -- king same as knight
+        King ->
+          map (MoveC p pos) $
+            filter (\x -> onBoard x && notBlocked x) $
+              [translate pos (x, y) | x <- [-1 .. 1], y <- [-1 .. 1], (x, y) /= (0, 0)]
+    where
+      forward = if c == W then 1 else -1
+      -- uses translations to generate all reachable moves(sliding)
+      reachable :: [Position] -> [MoveC]
+      reachable = concatMap (\(x, y) -> map (MoveC (Piece pt pc) pos) (accReachable c board pos (x, y) []))
+      -- checks if a position is not blocked by a friendly piece
+      notBlocked :: Position -> Bool
+      notBlocked pos = isNothing (board ! pos) || pieceColor (fromJust (board ! pos)) /= c
+      -- translate a position
+      translate :: Position -> Position -> Position
+      translate (x, y) (x', y') = (x + x', y + y')
+
+-- generate all psuedo moves(no check checks)
+-- only for checking if a move puts you in check
+genPsuedoMoves :: Board -> Color -> [MoveC]
+genPsuedoMoves board c = concatMap (genPsuedoMovesPos board c) (indices board)
+
+-- generate all legal moves for a color in a position
+genMovesChess :: Board -> Color -> [MoveC]
+genMovesChess board c = concatMap (filter (\m@(MoveC p from to) -> not $ inCheck (board // [(from, Nothing), (to, Just p)]) c) . genPsuedoMovesPos board c) (indices board)
 
 instance S.Game GameState where
   type Move GameState = MoveC
