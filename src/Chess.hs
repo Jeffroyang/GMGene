@@ -9,7 +9,7 @@ module Chess
     MoveC (..),
     Board,
     Player,
-    GameState,
+    GameState (..),
     Result (..),
     initBoard,
     move,
@@ -43,18 +43,18 @@ data Piece = Piece {pieceType :: PieceType, pieceColor :: Color}
 instance Show Piece where
   show :: Piece -> String
   show (Piece pt c) = case (pt, c) of
-    (King, B) -> "♔"
-    (Queen, B) -> "♕"
-    (Rook, B) -> "♖"
-    (Bishop, B) -> "♗"
-    (Knight, B) -> "♘"
-    (Pawn, B) -> "♙"
-    (King, W) -> "♚"
-    (Queen, W) -> "♛"
-    (Rook, W) -> "♜"
-    (Bishop, W) -> "♝"
-    (Knight, W) -> "♞"
-    (Pawn, W) -> "♟"
+    (King, B) -> "k"
+    (Queen, B) -> "q"
+    (Rook, B) -> "r"
+    (Bishop, B) -> "b"
+    (Knight, B) -> "n"
+    (Pawn, B) -> "p"
+    (King, W) -> "kw"
+    (Queen, W) -> "qw"
+    (Rook, W) -> "rw"
+    (Bishop, W) -> "bw"
+    (Knight, W) -> "nw"
+    (Pawn, W) -> "pw"
 
 type Board = Array Position (Maybe Piece)
 
@@ -142,13 +142,12 @@ move gs@(GameState p h b) m =
     else gs
 
 -- | returns whether a move is valid
--- TODO account for castling
 validMove :: GameState -> MoveC -> Bool
-validMove gs@(GameState p h b) m = m `elem` genMovesChess b p h
+validMove gs@(GameState p h b) m = m `elem` generateMoves (GameState p h b)
 
 -- | checks if the current player's king is mated
 gameOver :: GameState -> Bool
-gameOver gs = undefined
+gameOver (GameState p h b) = inCheck b p h && null (generateMoves (GameState p h b))
 
 -- | returns whether a position is on the board
 onBoard :: Position -> Bool
@@ -172,15 +171,17 @@ inCheck board c h =
 
 -- | check result of game
 checkResult :: GameState -> Result
-checkResult = undefined
+checkResult (GameState p h b)
+  | inCheck b p h =
+      if null (generateMoves $ GameState p h b)
+        then if p == W then BlackWin else WhiteWin
+        else None
+  | null (generateMoves $ GameState p h b) = Draw
+  | otherwise = None
 
 -- | evaluate chess position and return a score
 evaluate :: GameState -> Int
 evaluate = undefined
-
--- | generate all possible moves for a given position (INTERFACE WRAPPER)
-generateMoves :: GameState -> [MoveC]
-generateMoves = undefined
 
 -- generate all reachable positions from a position along a translation dir
 accReachable :: Player -> Board -> Position -> (Int, Int) -> [Position] -> [Position]
@@ -248,51 +249,6 @@ genPsuedoMovesPos board c h pos@(f, r) = case board ! pos of
             ( filter (\x -> onBoard x && notBlocked x) $
                 [translate pos (x, y) | x <- [-1 .. 1], y <- [-1 .. 1], (x, y) /= (0, 0)]
             )
-            ++ [ShortCastle c | not (inCheck board c h) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear]
-            ++ [LongCastle c | not (inCheck board c h) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
-          where
-            -- checks whether king has moved
-            kingNotMoved :: Bool
-            kingNotMoved =
-              not $
-                any
-                  ( \case
-                      SMoveC (Piece King c) _ _ -> True
-                      ShortCastle qc -> c == qc
-                      LongCastle qc -> c == qc
-                      _ -> False
-                  )
-                  h
-            -- checks whether a rook in a pos has moved
-            rookValid :: Position -> Bool
-            rookValid pos =
-              (board ! pos == Just (Piece Rook c))
-                && not
-                  ( any
-                      ( \case
-                          -- no friendly piece has moved from this position and no other piece has moved here
-                          SMoveC p@(Piece pt qc) from to -> (c == qc && from == pos) || to == pos
-                          -- no enemy pawn has moved here through special promotion move
-                          Promotion p@(Piece pt qc) from to -> to == pos
-                          _ -> False
-                      )
-                      h
-                  )
-            -- short castle path clear
-            shortCastleClear :: Bool
-            shortCastleClear =
-              isNothing (board ! (6, if c == W then 1 else 8))
-                && isNothing (board ! (7, if c == W then 1 else 8))
-                && not (inCheck board c h) -- currently not in check
-                && not (inCheck (board // [((6, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)]) c h) -- not in check at f1/8
-                -- long castle path clear
-            longCastleClear :: Bool
-            longCastleClear =
-              isNothing (board ! (4, if c == W then 1 else 8))
-                && isNothing (board ! (3, if c == W then 1 else 8))
-                && isNothing (board ! (2, if c == W then 1 else 8))
-                && not (inCheck board c h) -- currently not in check
-                && not (inCheck (board // [((4, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)]) c h) -- not in check at d1/8
     where
       forward = if c == W then 1 else -1
       -- uses translations to generate all reachable moves(sliding)
@@ -305,14 +261,60 @@ genPsuedoMovesPos board c h pos@(f, r) = case board ! pos of
       translate :: Position -> Position -> Position
       translate (x, y) (x', y') = (x + x', y + y')
 
+-- separate castle moves from above psuedo to avoid incheck recursion(these are not attack sqs)
+genCastleMoves :: Board -> Player -> History -> [MoveC]
+genCastleMoves board c h = [ShortCastle c | not (inCheck board c h) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear] ++ [LongCastle c | not (inCheck board c h) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
+  where
+    kingNotMoved :: Bool
+    kingNotMoved =
+      not $
+        any
+          ( \case
+              SMoveC (Piece King c) _ _ -> True
+              ShortCastle qc -> c == qc
+              LongCastle qc -> c == qc
+              _ -> False
+          )
+          h
+    -- checks whether a rook in a pos has moved
+    rookValid :: Position -> Bool
+    rookValid pos =
+      (board ! pos == Just (Piece Rook c))
+        && not
+          ( any
+              ( \case
+                  -- no friendly piece has moved from this position and no other piece has moved here
+                  SMoveC p@(Piece pt qc) from to -> (c == qc && from == pos) || to == pos
+                  -- no enemy pawn has moved here through special promotion move
+                  Promotion p@(Piece pt qc) from to -> to == pos
+                  _ -> False
+              )
+              h
+          )
+    -- short castle path clear
+    shortCastleClear :: Bool
+    shortCastleClear =
+      isNothing (board ! (6, if c == W then 1 else 8))
+        && isNothing (board ! (7, if c == W then 1 else 8))
+        && not (inCheck board c h) -- currently not in check
+        && not (inCheck (board // [((6, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)]) c h) -- not in check at f1/8
+        -- long castle path clear
+    longCastleClear :: Bool
+    longCastleClear =
+      isNothing (board ! (4, if c == W then 1 else 8))
+        && isNothing (board ! (3, if c == W then 1 else 8))
+        && isNothing (board ! (2, if c == W then 1 else 8))
+        && not (inCheck board c h) -- currently not in check
+        && not (inCheck (board // [((4, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)]) c h) -- not in check at d1/8
+
 -- generate all psuedo moves(no check checks)
 -- only for checking if a move puts you in check
 genPsuedoMoves :: Board -> Player -> History -> [MoveC]
 genPsuedoMoves board c h = concatMap (genPsuedoMovesPos board c h) (indices board)
 
 -- generate all legal moves for a color in a position
-genMovesChess :: Board -> Player -> History -> [MoveC]
-genMovesChess board c h = concatMap (filter (\m -> not $ inCheck (updateBoard board m) c h) . genPsuedoMovesPos board c h) (indices board)
+generateMoves :: GameState -> [MoveC]
+generateMoves gs@(GameState p h board) = concatMap (filter (\m -> not $ inCheck (updateBoard board m) p h) . genPsuedoMovesPos board p h) (indices board) ++ genCastleMoves board p h
 
 -- update board with a move
 updateBoard :: Board -> MoveC -> Board
@@ -322,12 +324,6 @@ updateBoard board m = case m of
   LongCastle c -> board // [((3, if c == W then 1 else 8), Just $ Piece King W), ((4, if c == W then 1 else 8), Just $ Piece Rook W), ((5, if c == W then 1 else 8), Nothing), ((1, if c == W then 1 else 8), Nothing)] -- long castle
   Promotion p from to -> board // [(to, Just p), (from, Nothing)] -- promotion moves(same as normal)
   EnPassant p@(Piece _ c) from to@(x, y) -> board // [(to, Just p), (from, Nothing), ((x, y - if c == W then 1 else -1), Nothing)] -- en passant moves
-
-onepiece :: Board
-onepiece = array ((1, 1), (8, 8)) [((x, y), Nothing) | x <- [1 .. 8], y <- [1 .. 8]] // [((8, 1), Just (Piece Rook W)), ((5, 1), Just (Piece King W)), ((6, 8), Just (Piece Rook B))]
-
--- >>> genMovesChess onepiece W []
--- [SMoveC {piece = Piece {pieceType = King, pieceColor = W}, from = (5,1), to = (4,1)},SMoveC {piece = Piece {pieceType = King, pieceColor = W}, from = (5,1), to = (4,2)},SMoveC {piece = Piece {pieceType = King, pieceColor = W}, from = (5,1), to = (5,2)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (6,1)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (7,1)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,8)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,7)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,6)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,5)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,4)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,3)},SMoveC {piece = Piece {pieceType = Rook, pieceColor = W}, from = (8,1), to = (8,2)}]
 
 instance S.Game GameState where
   type Move GameState = MoveC

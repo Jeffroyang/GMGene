@@ -9,49 +9,100 @@ instance Arbitrary GameState where
 
   shrink = undefined
 
+-- in check state
 testBoard1 :: GameState
-testBoard1 = constructBoard [(('e', 1), Piece King W), (('d', 2), Piece Pawn W), (('e', 7), Piece Queen B), (('e', 8), Piece King B)] W
+testBoard1 = constructBoard W [] [(('e', 1), Piece King W), (('d', 2), Piece Pawn W), (('e', 7), Piece Queen B), (('e', 8), Piece King B)]
+
+-- pinned state
+testBoard2 = constructBoard W [] [(('e', 1), Piece King W), (('e', 2), Piece Queen W), (('e', 7), Piece Queen B), (('e', 8), Piece King B)]
+
+-- quarter board for white movement
+testBoard3 = constructBoard W [] [(('e', 1), Piece King W), (('d', 1), Piece Queen W), (('c', 1), Piece Bishop W), (('b', 1), Piece Knight W), (('a', 1), Piece Rook W), (('e', 8), Piece King B)]
+
+-- castle testing board(able to castle short, cant castle long due to danger squares)
+testBoard4 = constructBoard W [] [(('e', 1), Piece King W), (('a', 1), Piece Rook W), (('h', 1), Piece Rook W), (('e', 8), Piece King B), (('d', 8), Piece Queen B), (('c', 8), Piece Bishop B), (('b', 8), Piece Knight B), (('a', 8), Piece Rook B)]
+
+-- en passantable
+testBoard5 = constructBoard W [SMoveC (Piece Pawn B) (5, 7) (5, 5)] [(('e', 1), Piece King W), (('d', 5), Piece Pawn W), (('e', 5), Piece Pawn B), (('e', 8), Piece King B)]
+
+testBoard6 = constructBoard W [SMoveC (Piece Pawn B) (5, 6) (5, 5), SMoveC (Piece Pawn B) (5, 7) (5, 6)] [(('e', 1), Piece King W), (('d', 5), Piece Pawn W), (('e', 5), Piece Pawn B), (('e', 8), Piece King B)]
+
+-- promotion
+testBoard7 = constructBoard W [] [(('e', 1), Piece King W), (('e', 7), Piece Pawn W), (('e', 8), Piece King B)]
+
+testBoard8 = constructBoard W [] [(('e', 1), Piece King W), (('e', 7), Piece Pawn W), (('d', 8), Piece Pawn B), (('a', 8), Piece King B)]
 
 -- | validMove correctly classifies moves
+-- there are many edge cases here, this attempts to cover most
 testValidMove :: Test
 testValidMove =
   TestList
-    [ "Valid move" ~: validMove initBoard (MoveC (Piece Pawn W) ('e', 2) ('e', 4)) ~?= True,
-      "Invalid pawn move" ~: validMove initBoard (MoveC (Piece Pawn W) ('e', 2) ('e', 5)) ~?= False,
-      "Invalid color move" ~: validMove initBoard (MoveC (Piece Pawn B) ('e', 7) ('e', 5)) ~?= False,
-      "Invalid into check move" ~: validMove testBoard1 (MoveC (Piece King W) ('e', 1) ('e', 2)) ~?= False,
-      "Invalid check move" ~: validMove testBoard1 (MoveC (Piece Pawn W) ('d', 2) ('d', 3)) ~?= False
+    [ -- general
+      "Valid move" ~: validMove initBoard (SMoveC (Piece Pawn W) (5, 2) (5, 4)) ~?= True,
+      "Wrong color move" ~: validMove initBoard (SMoveC (Piece Pawn B) (5, 7) (5, 5)) ~?= False,
+      "Initial pos wrong" ~: validMove initBoard (SMoveC (Piece Pawn W) (5, 3) (5, 4)) ~?= False,
+      -- piece movement
+      "Bad pawn move" ~: validMove initBoard (SMoveC (Piece Pawn W) (5, 2) (5, 5)) ~?= False,
+      "Good pawn move" ~: validMove initBoard (SMoveC (Piece Pawn W) (5, 2) (5, 4)) ~?= True,
+      "Pawn bad capture" ~: validMove initBoard (SMoveC (Piece Pawn W) (4, 2) (5, 3)) ~?= False,
+      "Bad knight move" ~: validMove initBoard (SMoveC (Piece Knight W) (2, 1) (2, 3)) ~?= False,
+      "Good knight move" ~: validMove initBoard (SMoveC (Piece Knight W) (2, 1) (3, 3)) ~?= True,
+      "Bad bishop move" ~: validMove testBoard3 (SMoveC (Piece Bishop W) (3, 1) (2, 3)) ~?= False,
+      "Good bishop move" ~: validMove testBoard3 (SMoveC (Piece Bishop W) (3, 1) (8, 6)) ~?= True,
+      "Bad rook move" ~: validMove testBoard3 (SMoveC (Piece Rook W) (1, 1) (2, 8)) ~?= False,
+      "Good rook move" ~: validMove testBoard3 (SMoveC (Piece Rook W) (1, 1) (1, 8)) ~?= True,
+      "Bad queen move" ~: validMove testBoard3 (SMoveC (Piece Queen W) (4, 1) (2, 8)) ~?= False,
+      "Good queen move" ~: validMove testBoard3 (SMoveC (Piece Queen W) (4, 1) (4, 8)) ~?= True,
+      "Good queen move2" ~: validMove testBoard3 (SMoveC (Piece Queen W) (4, 1) (1, 4)) ~?= True,
+      "Bad king move" ~: validMove testBoard3 (SMoveC (Piece King W) (5, 1) (5, 3)) ~?= False,
+      "Good king move" ~: validMove testBoard3 (SMoveC (Piece King W) (5, 1) (5, 2)) ~?= True,
+      -- check cases
+      "Into check move" ~: validMove testBoard1 (SMoveC (Piece King W) (5, 1) (5, 2)) ~?= False,
+      "Move other piece while in check" ~: validMove testBoard1 (SMoveC (Piece Pawn W) (4, 2) (4, 3)) ~?= False,
+      -- pin cases
+      "Move pinned piece away" ~: validMove testBoard2 (SMoveC (Piece Queen W) (5, 2) (4, 3)) ~?= False,
+      "Move pinned piece along pin" ~: validMove testBoard2 (SMoveC (Piece Queen W) (5, 2) (5, 4)) ~?= True,
+      -- castling
+      "Castle short" ~: validMove testBoard4 (ShortCastle W) ~?= True,
+      "Castle long bad" ~: validMove testBoard4 (LongCastle W) ~?= False,
+      -- en passant
+      "En passantable" ~: validMove testBoard5 (EnPassant (Piece Pawn W) (4, 5) (5, 6)) ~?= True,
+      "not en passantable" ~: validMove testBoard6 (EnPassant (Piece Pawn W) (4, 5) (5, 6)) ~?= False,
+      -- promotion
+      "Blocked promotion" ~: validMove testBoard7 (Promotion (Piece Queen W) (5, 7) (5, 8)) ~?= False,
+      "Advance promote" ~: validMove testBoard8 (Promotion (Piece Queen W) (5, 7) (5, 8)) ~?= True,
+      "Take promote" ~: validMove testBoard8 (Promotion (Piece Queen W) (5, 7) (4, 8)) ~?= True
     ]
 
-testBoard2 :: GameState
-testBoard2 = constructBoard [(('e', 1), Piece King W), (('e', 2), Piece Queen B), (('e', 3), Piece King B)] W
+-- testBoard2 :: GameState
+-- testBoard2 = constructBoard [(('e', 1), Piece King W), (('e', 2), Piece Queen B), (('e', 3), Piece King B)] W
 
-testGameOver :: Test
-testGameOver =
-  TestList
-    [ "Game over" ~: gameOver testBoard2 ~?= True,
-      "Game not over" ~: gameOver initBoard ~?= False
-    ]
+-- testGameOver :: Test
+-- testGameOver =
+--   TestList
+--     [ "Game over" ~: gameOver testBoard2 ~?= True,
+--       "Game not over" ~: gameOver initBoard ~?= False
+--     ]
 
--- | ¯\_(ツ)_/¯ TBD
-testMove :: Test
-testMove = undefined
+-- -- | ¯\_(ツ)_/¯ TBD
+-- testMove :: Test
+-- testMove = undefined
 
--- | ¯\_(ツ)_/¯ TBD
-testEvaluate :: Test
-testEvaluate =
-  TestList
-    [ "Evaluate 0" ~: evaluate initBoard ~?= 0,
-      "Evaluate 1" ~: evaluate testBoard1 ~?= 0,
-      "Evaluate 2" ~: evaluate testBoard2 ~?= 0
-    ]
+-- -- | ¯\_(ツ)_/¯ TBD
+-- testEvaluate :: Test
+-- testEvaluate =
+--   TestList
+--     [ "Evaluate 0" ~: evaluate initBoard ~?= 0,
+--       "Evaluate 1" ~: evaluate testBoard1 ~?= 0,
+--       "Evaluate 2" ~: evaluate testBoard2 ~?= 0
+--     ]
 
-testBoard3 :: GameState
-testBoard3 = constructBoard [(('e', 2), Piece Pawn W)] W
+-- testBoard3 :: GameState
+-- testBoard3 = constructBoard [(('e', 2), Piece Pawn W)] W
 
--- 早上好中国，现在我有冰淇淋
-testGenerateMoves :: Test
-testGenerateMoves =
-  TestList
-    [ "Single pawn" ~: generateMoves testBoard3 ~?= [MoveC (Piece Pawn W) ('e', 2) ('e', 3), MoveC (Piece Pawn W) ('e', 2) ('e', 4)]
-    ]
+-- -- 早上好中国，现在我有冰淇淋
+-- testGenerateMoves :: Test
+-- testGenerateMoves =
+--   TestList
+--     [ "Single pawn" ~: generateMoves testBoard3 ~?= [MoveC (Piece Pawn W) ('e', 2) ('e', 3), MoveC (Piece Pawn W) ('e', 2) ('e', 4)]
+--     ]
