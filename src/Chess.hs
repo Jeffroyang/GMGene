@@ -34,87 +34,117 @@ data Color = B | W deriving (Show, Eq)
 
 data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq)
 
--- files are represented as ints 1-8 as well for easier translation
+-- | row col representation of a position for easier translation
 type Position = (Int, Int)
 
-data Piece = Piece
-  { pieceType :: PieceType,
-    pieceColor :: Color
-  }
-  deriving (Show, Eq)
+data Piece = Piece {pieceType :: PieceType, pieceColor :: Color}
+  deriving (Eq)
+
+instance Show Piece where
+  show :: Piece -> String
+  show (Piece pt c) = case (pt, c) of
+    (King, B) -> "♔"
+    (Queen, B) -> "♕"
+    (Rook, B) -> "♖"
+    (Bishop, B) -> "♗"
+    (Knight, B) -> "♘"
+    (Pawn, B) -> "♙"
+    (King, W) -> "♚"
+    (Queen, W) -> "♛"
+    (Rook, W) -> "♜"
+    (Bishop, W) -> "♝"
+    (Knight, W) -> "♞"
+    (Pawn, W) -> "♟"
+
+type Board = Array Position (Maybe Piece)
 
 data MoveC
-  = SMoveC
-      { piece :: Piece,
-        from :: Position,
-        to :: Position
-      } -- standard move or take
+  = SMoveC {piece :: Piece, from :: Position, to :: Position} -- standard move or take
   | ShortCastle Color -- O-O
   | LongCastle Color -- O-O-O
   | Promotion {piece :: Piece, from :: Position, to :: Position} -- pawn promotion to piece at position (to) from position (from) (assumed pawn)
   | EnPassant {piece :: Piece, from :: Position, to :: Position} -- en passant capture
-  deriving (Show, Eq)
-
-type Board = Array Position (Maybe Piece)
-
-type Player = Color
+  deriving (Eq, Show)
 
 type History = [MoveC]
 
-type GameState = State (Player, History) Board
+type Player = Color
+
+data GameState = GameState {player :: Player, history :: History, board :: Board}
+
+instance Show GameState where
+  show :: GameState -> String
+  show gs = showBoard (board gs)
+
+-- | display the board
+showBoard :: Board -> String
+showBoard board =
+  unlines $
+    map
+      ( (unwords . map showPiece)
+          . (\y -> map (\x -> board ! (x, y)) [1 .. 8])
+      )
+      [1 .. 8]
+  where
+    showPiece :: Maybe Piece -> String
+    showPiece Nothing = ". "
+    showPiece (Just p) = show p ++ " "
 
 data Result = BlackWin | WhiteWin | Draw | None deriving (Show, Eq)
 
 initBoard :: GameState
-initBoard = do
-  let board =
-        array
-          ((1, 1), (8, 8))
-          ( [ ((1, 1), Just (Piece Rook W)),
-              ((2, 1), Just (Piece Knight W)),
-              ((3, 1), Just (Piece Bishop W)),
-              ((4, 1), Just (Piece Queen W)),
-              ((5, 1), Just (Piece King W)),
-              ((6, 1), Just (Piece Bishop W)),
-              ((7, 1), Just (Piece Knight W)),
-              ((8, 1), Just (Piece Rook W)),
-              ((1, 8), Just (Piece Rook B)),
-              ((2, 8), Just (Piece Knight B)),
-              ((3, 8), Just (Piece Bishop B)),
-              ((4, 8), Just (Piece Queen B)),
-              ((5, 8), Just (Piece King B)),
-              ((6, 8), Just (Piece Bishop B)),
-              ((7, 8), Just (Piece Knight B)),
-              ((8, 8), Just (Piece Rook B))
-            ]
-              ++ [((x, 2), Just (Piece Pawn W)) | x <- [1 .. 8]]
-              ++ [((x, 7), Just (Piece Pawn B)) | x <- [1 .. 8]]
-              ++ [((x, y), Nothing) | x <- [1 .. 8], y <- [3 .. 6]]
-          )
-  put (W, [])
-  return board
+initBoard = GameState W [] board
+  where
+    board =
+      array
+        ((1, 1), (8, 8))
+        ( [ ((1, 1), Just (Piece Rook W)),
+            ((2, 1), Just (Piece Knight W)),
+            ((3, 1), Just (Piece Bishop W)),
+            ((4, 1), Just (Piece Queen W)),
+            ((5, 1), Just (Piece King W)),
+            ((6, 1), Just (Piece Bishop W)),
+            ((7, 1), Just (Piece Knight W)),
+            ((8, 1), Just (Piece Rook W)),
+            ((1, 8), Just (Piece Rook B)),
+            ((2, 8), Just (Piece Knight B)),
+            ((3, 8), Just (Piece Bishop B)),
+            ((4, 8), Just (Piece Queen B)),
+            ((5, 8), Just (Piece King B)),
+            ((6, 8), Just (Piece Bishop B)),
+            ((7, 8), Just (Piece Knight B)),
+            ((8, 8), Just (Piece Rook B))
+          ]
+            ++ [((x, 2), Just (Piece Pawn W)) | x <- [1 .. 8]]
+            ++ [((x, 7), Just (Piece Pawn B)) | x <- [1 .. 8]]
+            ++ [((x, y), Nothing) | x <- [1 .. 8], y <- [3 .. 6]]
+        )
+
+type PositionC = (Char, Int)
 
 -- | construct a board from a list of pieces and a current player
-constructBoard :: [(Position, Piece)] -> Player -> GameState
-constructBoard = undefined
+constructBoard :: Player -> History -> [(PositionC, Piece)] -> GameState
+constructBoard player history positions = GameState player history board
+  where
+    board =
+      array
+        ((1, 1), (8, 8))
+        [((x, y), Nothing) | x <- [1 .. 8], y <- [1 .. 8]]
+        // map
+          (\((x, y), p) -> ((fromEnum x - fromEnum 'a' + 1, y), Just p))
+          positions
 
 -- | checks validity of move then moves piece and updates board, else returns same board
 move :: GameState -> MoveC -> GameState
-move state m = do
-  (player, history) <- get
-  board <- state
-
-  if validMove board player m history
-    then do
-      put (if player == W then B else W, m : history)
-      -- TODO account for castling
-      return $ updateBoard board m
-    else state
+move gs@(GameState p h b) m =
+  if validMove gs m
+    then GameState (if p == W then B else W) (m : h) (updateBoard b m)
+    else gs
 
 -- | returns whether a move is valid
 -- TODO account for castling
-validMove :: Board -> Color -> MoveC -> History -> Bool
-validMove board c m h = m `elem` genMovesChess board c h
+validMove :: GameState -> MoveC -> Bool
+validMove gs@(GameState p h b) m = m `elem` genMovesChess b p h
 
 -- | checks if the current player's king is mated
 gameOver :: GameState -> Bool
@@ -124,8 +154,8 @@ gameOver gs = undefined
 onBoard :: Position -> Bool
 onBoard (x, y) = inRange ((1, 1), (8, 8)) (x, y)
 
--- | returns whether in a position the king is under attack for a given color
-inCheck :: Board -> Color -> History -> Bool
+-- | returns whether in a position the king is under attack for a given player
+inCheck :: Board -> Player -> History -> Bool
 inCheck board c h =
   let kingPos = head $ map fst $ filter (\(_, p) -> p == Just (Piece King c)) (assocs board)
    in kingPos
@@ -136,10 +166,6 @@ inCheck board c h =
               _ -> (0, 0) -- dummy value for other possible enemy moves since they dont attack
           )
           (genPsuedoMoves board (if c == W then B else W) h)
-
--- | display the board
-showBoard :: Board -> String
-showBoard = undefined
 
 -- | check result of game
 checkResult :: GameState -> Result
@@ -154,7 +180,7 @@ generateMoves :: GameState -> [MoveC]
 generateMoves = undefined
 
 -- generate all reachable positions from a position along a translation dir
-accReachable :: Color -> Board -> Position -> (Int, Int) -> [Position] -> [Position]
+accReachable :: Player -> Board -> Position -> (Int, Int) -> [Position] -> [Position]
 accReachable c board src@(x, y) translate@(x', y') acc =
   let pos = (x + x', y + y')
    in if onBoard pos
@@ -164,7 +190,7 @@ accReachable c board src@(x, y) translate@(x', y') acc =
         else acc
 
 -- | generate all psuedo legal moves for a given position
-genPsuedoMovesPos :: Board -> Color -> History -> Position -> [MoveC]
+genPsuedoMovesPos :: Board -> Player -> History -> Position -> [MoveC]
 genPsuedoMovesPos board c h pos@(f, r) = case board ! pos of
   Nothing -> []
   Just p@(Piece pt pc) ->
@@ -278,11 +304,11 @@ genPsuedoMovesPos board c h pos@(f, r) = case board ! pos of
 
 -- generate all psuedo moves(no check checks)
 -- only for checking if a move puts you in check
-genPsuedoMoves :: Board -> Color -> History -> [MoveC]
+genPsuedoMoves :: Board -> Player -> History -> [MoveC]
 genPsuedoMoves board c h = concatMap (genPsuedoMovesPos board c h) (indices board)
 
 -- generate all legal moves for a color in a position
-genMovesChess :: Board -> Color -> History -> [MoveC]
+genMovesChess :: Board -> Player -> History -> [MoveC]
 genMovesChess board c h = concatMap (filter (\m -> not $ inCheck (updateBoard board m) c h) . genPsuedoMovesPos board c h) (indices board)
 
 -- update board with a move
@@ -305,7 +331,7 @@ instance S.Game GameState where
   initBoard :: GameState
   initBoard = initBoard
 
-  move :: GameState -> S.Move GameState -> GameState
+  move :: GameState -> MoveC -> GameState
   move = move
 
   gameOver :: GameState -> Bool
@@ -314,5 +340,5 @@ instance S.Game GameState where
   evaluate :: GameState -> Int
   evaluate = evaluate
 
-  generateMoves :: GameState -> [S.Move GameState]
+  generateMoves :: GameState -> [MoveC]
   generateMoves = generateMoves
