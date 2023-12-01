@@ -70,23 +70,19 @@ testValidMove =
       "not en passantable" ~: validMove testBoard6 (EnPassant (Piece Pawn W) (4, 5) (5, 6)) ~?= False,
       -- promotion
       "Blocked promotion" ~: validMove testBoard7 (Promotion (Piece Queen W) (5, 7) (5, 8)) ~?= False,
-      "Advance promote" ~: validMove testBoard8 (Promotion (Piece Queen W) (5, 7) (5, 8)) ~?= True,
-      "Take promote" ~: validMove testBoard8 (Promotion (Piece Queen W) (5, 7) (4, 8)) ~?= True
+      "Advance promote" ~: validMove testBoard8 (Promotion (Piece Rook W) (5, 7) (5, 8)) ~?= True,
+      "Take promote" ~: validMove testBoard8 (Promotion (Piece Knight W) (5, 7) (4, 8)) ~?= True
     ]
 
--- testBoard2 :: GameState
--- testBoard2 = constructBoard [(('e', 1), Piece King W), (('e', 2), Piece Queen B), (('e', 3), Piece King B)] W
+testBoard9 :: GameState
+testBoard9 = constructBoard W [] [(('e', 1), Piece King W), (('e', 2), Piece Queen B), (('e', 3), Piece King B)]
 
--- testGameOver :: Test
--- testGameOver =
---   TestList
---     [ "Game over" ~: gameOver testBoard2 ~?= True,
---       "Game not over" ~: gameOver initBoard ~?= False
---     ]
-
--- -- | ¯\_(ツ)_/¯ TBD
--- testMove :: Test
--- testMove = undefined
+testGameOver :: Test
+testGameOver =
+  TestList
+    [ "Game over" ~: gameOver testBoard9 ~?= True,
+      "Game not over" ~: gameOver initBoard ~?= False
+    ]
 
 -- -- | ¯\_(ツ)_/¯ TBD
 -- testEvaluate :: Test
@@ -95,14 +91,4 @@ testValidMove =
 --     [ "Evaluate 0" ~: evaluate initBoard ~?= 0,
 --       "Evaluate 1" ~: evaluate testBoard1 ~?= 0,
 --       "Evaluate 2" ~: evaluate testBoard2 ~?= 0
---     ]
-
--- testBoard3 :: GameState
--- testBoard3 = constructBoard [(('e', 2), Piece Pawn W)] W
-
--- -- 早上好中国，现在我有冰淇淋
--- testGenerateMoves :: Test
--- testGenerateMoves =
---   TestList
---     [ "Single pawn" ~: generateMoves testBoard3 ~?= [MoveC (Piece Pawn W) ('e', 2) ('e', 3), MoveC (Piece Pawn W) ('e', 2) ('e', 4)]
 --     ]
