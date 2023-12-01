@@ -161,8 +161,11 @@ inCheck board c h =
    in kingPos
         `elem` map
           ( \case
-              SMoveC _ _ to -> to
-              Promotion _ _ to -> to
+              -- for most pieces standard moves represent attack range, except pawns which attack diagonally
+              -- need to filter out advance moves
+              SMoveC p@(Piece pt _) from@(x, y) to@(x', y') -> if pt == Pawn then if x /= x' then to else (0, 0) else to
+              -- same with promotions
+              Promotion _ from@(x, y) to@(x', y') -> if x /= x' then to else (0, 0)
               _ -> (0, 0) -- dummy value for other possible enemy moves since they dont attack
           )
           (genPsuedoMoves board (if c == W then B else W) h)
