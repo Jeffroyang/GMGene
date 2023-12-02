@@ -124,5 +124,5 @@ printPiece (Piece Pawn _) = "P"
 printPosition :: Position -> String
 printPosition (x, y)
   | x >= 1 && x <= 8 && y >= 1 && y <= 8 =
-      [chr (ord 'a' + x - 1), chr (ord '1' + y - 1)]
+      chr (ord 'a' + x - 1) : show y
 printPosition _ = error "Invalid position"

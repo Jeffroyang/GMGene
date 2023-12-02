@@ -95,38 +95,40 @@ instance Arbitrary Piece where
     t <- arbitrary
     return $ Piece t c
 
+data BoundedPosition = BoundedPosition Int Int deriving (Show)
+
+instance Arbitrary BoundedPosition where
+  arbitrary = do
+    x <- elements [1 .. 8]
+    y <- elements [1 .. 8]
+    return $ BoundedPosition x y
+
 prop_roundtrip_piece :: Piece -> Bool
 prop_roundtrip_piece p = P.parse (parsePiece (pieceColor p)) (printPiece p) == Right p
 
-prop_roundtrip_position :: Position -> Property
-prop_roundtrip_position p = C.onBoard p ==> P.parse parsePosition (printPosition p) == Right p
+prop_roundtrip_position :: BoundedPosition -> Bool
+prop_roundtrip_position (BoundedPosition x y) = P.parse parsePosition (printPosition (x, y)) == Right (x, y)
 
-prop_roundtrip_standard_move :: Piece -> Position -> Position -> Property
-prop_roundtrip_standard_move p s e =
-  C.onBoard s
-    && C.onBoard e
-    ==> P.parse
-      (parseStandardMove (pieceColor p))
-      (printPiece p ++ " " ++ printPosition s ++ " " ++ printPosition e)
-    == Right (SMove p s e)
+prop_roundtrip_standard_move :: Piece -> BoundedPosition -> BoundedPosition -> Bool
+prop_roundtrip_standard_move p (BoundedPosition x y) (BoundedPosition x' y') =
+  P.parse
+    (parseStandardMove (pieceColor p))
+    (printPiece p ++ " " ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
+    == Right (SMove p (x, y) (x', y'))
 
-prop_roundtrip_en_passant :: Piece -> Position -> Position -> Property
-prop_roundtrip_en_passant p s e =
-  C.onBoard s
-    && C.onBoard e
-    ==> P.parse
-      (parseEnPassant (pieceColor p))
-      ("ep " ++ printPiece p ++ " " ++ printPosition s ++ " " ++ printPosition e)
-    == Right (EnPassant p s e)
+prop_roundtrip_en_passant :: Piece -> BoundedPosition -> BoundedPosition -> Bool
+prop_roundtrip_en_passant p (BoundedPosition x y) (BoundedPosition x' y') =
+  P.parse
+    (parseEnPassant (pieceColor p))
+    ("ep " ++ printPiece p ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
+    == Right (EnPassant p (x, y) (x', y'))
 
-prop_roundtrip_promotion :: Piece -> Position -> Position -> Property
-prop_roundtrip_promotion p s e =
-  C.onBoard s
-    && C.onBoard e
-    ==> P.parse
-      (parsePromotion (pieceColor p))
-      ("^" ++ printPiece p ++ " " ++ printPosition s ++ " " ++ printPosition e)
-    == Right (Promotion p s e)
+prop_roundtrip_promotion :: Piece -> BoundedPosition -> BoundedPosition -> Bool
+prop_roundtrip_promotion p (BoundedPosition x y) (BoundedPosition x' y') =
+  P.parse
+    (parsePromotion (pieceColor p))
+    ("^" ++ printPiece p ++ " " ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
+    == Right (Promotion p (x, y) (x', y'))
 
 test_all :: IO Counts
 test_all =
