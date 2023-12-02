@@ -1,3 +1,6 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Use $>" #-}
 module ChessParser where
 
 import Chess
@@ -59,8 +62,8 @@ parsePosition =
   wsP $
     liftA2
       (,)
-      (letterToInt <$> P.satisfy isAlpha)
-      (digitToInt <$> P.satisfy isDigit)
+      (letterToInt <$> P.satisfy (\c -> isAlpha c && c >= 'a' && c <= 'h'))
+      (digitToInt <$> P.satisfy (\c -> isDigit c && c >= '1' && c <= '8'))
   where
     letterToInt :: Char -> Int
     letterToInt c = ord c - ord 'a' + 1
@@ -109,3 +112,17 @@ parseEnPassant c =
           parsePosition
           parsePosition
       )
+
+printPiece :: Piece -> String
+printPiece (Piece King _) = "K"
+printPiece (Piece Queen _) = "Q"
+printPiece (Piece Rook _) = "R"
+printPiece (Piece Bishop _) = "B"
+printPiece (Piece Knight _) = "N"
+printPiece (Piece Pawn _) = "P"
+
+printPosition :: Position -> String
+printPosition (x, y)
+  | x >= 1 && x <= 8 && y >= 1 && y <= 8 =
+      [chr (ord 'a' + x - 1), chr (ord '1' + y - 1)]
+printPosition _ = error "Invalid position"
