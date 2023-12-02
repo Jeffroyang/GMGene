@@ -13,6 +13,13 @@ import Parser qualified as P
 playGame :: IO ()
 playGame = do
   putStrLn "Welcome to Chess!"
+  putStrLn "You can enter moves in the following formats:"
+  putStrLn "  Standard move: \"N g1 f3\" (Knight from g1 to f3)"
+  putStrLn "  Short castle: \"OO\""
+  putStrLn "  Long castle: \"OOO\""
+  putStrLn "  Promotion: \"^Q a7 a8\" (Pawn from a7 to a8, promoting to Queen)"
+  putStrLn "  En passant: \"ep a5 b6\" (Pawn from a5 to b6, capturing en passant)"
+  putStrLn "  The abbreviated pieces are K (King), Q (Queen), R (Rook), B (Bishop), N (Knight), and P (Pawn)"
   putStrLn "Would you like to play against the computer? (Y/N)"
   ai <- getLine
   case ai of
@@ -40,7 +47,7 @@ getPlayerColor = do
 -- | Gets a move from the user
 getUserMove :: Player -> IO C.Move
 getUserMove p = do
-  putStrLn "Enter a move:"
+  putStr "Enter a move:"
   move <- getLine
   let parsedMove = P.parse (parseChessMove p) move
   case parsedMove of
@@ -64,7 +71,7 @@ playGameHuman g = do
 -- | Get search depth from user
 getSearchDepth :: IO Int
 getSearchDepth = do
-  putStrLn "Enter search depth (1-3):"
+  putStr "Enter search depth (1-3):"
   depth <- getLine
   let parsedDepth = read depth :: Maybe Int
   case parsedDepth of

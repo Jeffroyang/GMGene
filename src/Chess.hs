@@ -78,7 +78,7 @@ data GameState = GameState
 instance Show GameState where
   show :: GameState -> String
   show (GameState player history captured board) =
-    "Board State:\n"
+    "\n"
       ++ showBoard board
       ++ "White Captured: "
       ++ show (filter (\(Piece _ c) -> c == W) captured)
@@ -88,7 +88,6 @@ instance Show GameState where
       ++ "\n"
       ++ "Current Player: "
       ++ show player
-      ++ "\n"
 
 -- | display the board
 showBoard :: Board -> String
