@@ -7,16 +7,21 @@ import Test.HUnit
 import Test.QuickCheck
 
 -- >>> runTestTT testParsePiece
+-- Counts {cases = 7, tried = 7, errors = 0, failures = 0}
 testParsePiece :: Test
 testParsePiece =
   TestList
-    [ "Parse piece 1" ~: P.parse (parsePiece W) "K" ~?= Right (Piece King W),
-      "Parse piece 2" ~: P.parse (parsePiece W) "Q" ~?= Right (Piece Queen W),
-      "Parse piece 3" ~: P.parse (parsePiece B) "R" ~?= Right (Piece Rook B),
-      "Parse piece 4" ~: P.parse (parsePiece B) "B" ~?= Right (Piece Bishop B),
-      "Parse piece 5" ~: P.parse (parsePiece W) "N" ~?= Right (Piece Knight W)
+    [ "Parse piece K" ~: P.parse (parsePiece W) "K" ~?= Right (Piece King W),
+      "Parse piece Q" ~: P.parse (parsePiece W) "Q" ~?= Right (Piece Queen W),
+      "Parse piece R" ~: P.parse (parsePiece B) "R" ~?= Right (Piece Rook B),
+      "Parse piece B" ~: P.parse (parsePiece B) "B" ~?= Right (Piece Bishop B),
+      "Parse piece N" ~: P.parse (parsePiece W) "N" ~?= Right (Piece Knight W),
+      "Parse piece invalid" ~: P.parse (parsePiece W) "X" ~?= Left "No parses",
+      "Parse piece P" ~: P.parse (parsePiece B) "P asd" ~?= Right (Piece Pawn B)
     ]
 
+-- >>> runTestTT testParsePosition
+-- Counts {cases = 9, tried = 9, errors = 0, failures = 1}
 testParsePosition :: Test
 testParsePosition =
   TestList

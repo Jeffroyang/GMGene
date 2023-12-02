@@ -71,17 +71,24 @@ type Player = Color
 data GameState = GameState
   { player :: Player,
     history :: History,
+    captured :: [Piece],
     board :: Board
   }
 
 instance Show GameState where
   show :: GameState -> String
-  show (GameState player history board) =
-    "Current Player: "
+  show (GameState player history captured board) =
+    "Board State:\n"
+      ++ showBoard board
+      ++ "White Captured: "
+      ++ show (filter (\(Piece _ c) -> c == W) captured)
+      ++ "\n"
+      ++ "Black Captured: "
+      ++ show (filter (\(Piece _ c) -> c == B) captured)
+      ++ "\n"
+      ++ "Current Player: "
       ++ show player
       ++ "\n"
-      ++ "Board State:\n"
-      ++ showBoard board
 
 -- | display the board
 showBoard :: Board -> String
@@ -95,10 +102,10 @@ showBoard board =
          in show r ++ " |" ++ concatMap (\c -> showPiece (board ! (c, r))) [1 .. 8] ++ "|\n"
    in frameRow ++ concatMap showRow [8, 7 .. 1] ++ frameRow ++ "    a  b  c  d  e  f  g  h\n"
 
-data Result = BlackWin | WhiteWin | Draw | None deriving (Show, Eq)
+data Result = BlackWin | WhiteWin | Draw | InProgress deriving (Show, Eq)
 
 initBoard :: GameState
-initBoard = GameState W [] board
+initBoard = GameState W [] [] board
   where
     board =
       array
@@ -129,7 +136,7 @@ type PositionC = (Char, Int)
 
 -- | construct a board from a list of pieces and a current player
 constructBoard :: Player -> History -> [(PositionC, Piece)] -> GameState
-constructBoard player history positions = GameState player history board
+constructBoard player history positions = GameState player history [] board
   where
     board =
       array
@@ -145,8 +152,19 @@ move gs m =
   let b = board gs
       p = player gs
       h = history gs
+      cap = captured gs
+      opp = if p == W then B else W
+      cap' = case m of
+        SMove _ _ to ->
+          case b ! to of
+            Just p@(Piece _ c) -> if c == opp then p : cap else cap
+            _ -> cap
+        EnPassant _ _ to -> case b ! to of
+          Just p@(Piece _ c) -> if c == opp then p : cap else cap
+          _ -> cap
+        _ -> cap
    in if validMove gs m
-        then GameState (if p == W then B else W) (m : h) (updateBoard b m)
+        then GameState opp (m : h) cap' (updateBoard b m)
         else gs
 
 -- | returns whether a move is valid
@@ -163,6 +181,7 @@ inCheck gs =
   let b = board gs
       p = player gs
       h = history gs
+      cap = captured gs
       kingPos = head $ map fst $ filter (\(_, piece) -> piece == Just (Piece King p)) (assocs b)
    in kingPos
         `elem` map
@@ -174,21 +193,21 @@ inCheck gs =
               Promotion _ from@(x, y) to@(x', y') -> if x /= x' then to else (0, 0)
               _ -> (0, 0) -- dummy value for other possible enemy moves since they dont attack
           )
-          (genPsuedoMoves $ GameState (if p == W then B else W) h b)
+          (genPsuedoMoves $ GameState (if p == W then B else W) h cap b)
 
 -- | check result of game
 checkResult :: GameState -> Result
-checkResult gs@(GameState p h b)
+checkResult gs@(GameState p h cap b)
   | inCheck gs =
-      if null (generateMoves $ GameState p h b)
+      if null (generateMoves $ GameState p h cap b)
         then if p == W then BlackWin else WhiteWin
-        else None
-  | null (generateMoves $ GameState p h b) = Draw
-  | otherwise = None
+        else InProgress
+  | null (generateMoves $ GameState p h cap b) = Draw
+  | otherwise = InProgress
 
 -- | checks if game is in a terminal state
 gameOver :: GameState -> Bool
-gameOver gs = checkResult gs /= None
+gameOver gs = checkResult gs /= InProgress
 
 -- generate all reachable positions from a position along a translation dir
 accReachable :: Player -> Board -> Position -> (Int, Int) -> [Position] -> [Position]
@@ -278,6 +297,7 @@ genCastleMoves gs =
   let b = board gs
       c = player gs
       h = history gs
+      cap = captured gs
       kingNotMoved :: Bool
       kingNotMoved =
         not $
@@ -310,7 +330,7 @@ genCastleMoves gs =
         isNothing (b ! (6, if c == W then 1 else 8))
           && isNothing (b ! (7, if c == W then 1 else 8))
           && not (inCheck gs) -- currently not in check
-          && not (inCheck $ GameState c h (b // [((6, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at f1/8
+          && not (inCheck $ GameState c h cap (b // [((6, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at f1/8
           -- long castle path clear
       longCastleClear :: Bool
       longCastleClear =
@@ -318,7 +338,7 @@ genCastleMoves gs =
           && isNothing (b ! (3, if c == W then 1 else 8))
           && isNothing (b ! (2, if c == W then 1 else 8))
           && not (inCheck gs) -- currently not in check
-          && not (inCheck $ GameState c h (b // [((4, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at d1/8
+          && not (inCheck $ GameState c h cap (b // [((4, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at d1/8
    in [ShortCastle c | not (inCheck gs) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear] ++ [LongCastle c | not (inCheck gs) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
 
 -- generate all psuedo moves(no check checks)
@@ -330,7 +350,7 @@ genPsuedoMoves gs =
 
 -- generate all legal moves for a color in a position
 generateMoves :: GameState -> [Move]
-generateMoves gs@(GameState p h board) = concatMap (filter (not . inCheck . GameState p h . updateBoard board) . genPsuedoMovesPos gs) (indices board) ++ genCastleMoves gs
+generateMoves gs@(GameState p h cap board) = concatMap (filter (not . inCheck . GameState p h cap . updateBoard board) . genPsuedoMovesPos gs) (indices board) ++ genCastleMoves gs
 
 -- update board with a move
 updateBoard :: Board -> Move -> Board
