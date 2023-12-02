@@ -1,6 +1,10 @@
-module ChessScoring where
+{-# LANGUAGE TypeFamilies #-}
 
-import Chess
+module ChessAI where
+
+import Chess (GameState)
+import Chess qualified as C
+import GameAI qualified as G
 
 -- Scoring functions based on https://www.dailychess.com/rival/programming/evaluation.php
 -- Need to do more research to find out more specifics about the scoring functions
@@ -28,3 +32,22 @@ queenScore g = undefined
 -- | Returns the king score for a game state
 kingScore :: GameState -> Int
 kingScore g = undefined
+
+-- | Returns the total score for a game state
+evaluate :: GameState -> Int
+evaluate g = undefined
+
+instance G.SearchableGame GameState where
+  type Move GameState = C.Move
+
+  update :: GameState -> C.Move -> GameState
+  update = C.move
+
+  gameOver :: GameState -> Bool
+  gameOver = C.gameOver
+
+  evaluate :: GameState -> Int
+  evaluate = evaluate
+
+  generateMoves :: GameState -> [C.Move]
+  generateMoves = C.generateMoves

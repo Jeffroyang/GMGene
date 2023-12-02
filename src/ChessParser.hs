@@ -1,8 +1,12 @@
-module MoveParser where
+module ChessParser where
 
 import Chess
 import Control.Applicative
-import Control.Monad
+  ( Alternative (many),
+    Applicative (liftA2),
+    liftA3,
+  )
+import Control.Monad ()
 import Data.Char
 import Parser (Parser)
 import Parser qualified as P
@@ -26,7 +30,7 @@ constP :: String -> a -> Parser a
 constP s x = stringP s *> pure x
 
 -- | Parser for chess moves
-parseChessMove :: Color -> Parser MoveC
+parseChessMove :: Color -> Parser Move
 parseChessMove c =
   P.choice
     [ parseStandardMove c,
@@ -65,25 +69,25 @@ parsePosition =
     digitToInt c = ord c - ord '1' + 1
 
 -- | Parser for standard moves
-parseStandardMove :: Color -> Parser MoveC
+parseStandardMove :: Color -> Parser Move
 parseStandardMove c =
   wsP $
     liftA3
-      SMoveC
+      SMove
       (parsePiece c)
       parsePosition
       parsePosition
 
 -- | Parser for long castles
-parseLongCastle :: Color -> Parser MoveC
+parseLongCastle :: Color -> Parser Move
 parseLongCastle c = constP "OOO" (LongCastle c)
 
 -- | Parser for short castles
-parseShortCastle :: Color -> Parser MoveC
+parseShortCastle :: Color -> Parser Move
 parseShortCastle c = constP "OO" (ShortCastle c)
 
 -- | Parser for promotions
-parsePromotion :: Color -> Parser MoveC
+parsePromotion :: Color -> Parser Move
 parsePromotion c =
   stringP "^"
     *> wsP
@@ -95,7 +99,7 @@ parsePromotion c =
       )
 
 -- | Parser for en passant
-parseEnPassant :: Color -> Parser MoveC
+parseEnPassant :: Color -> Parser Move
 parseEnPassant c =
   stringP "ep"
     *> wsP

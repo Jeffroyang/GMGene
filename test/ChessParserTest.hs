@@ -1,7 +1,7 @@
-module MoveParserTest where
+module ChessParserTest where
 
 import Chess
-import MoveParser
+import ChessParser
 import Parser qualified as P
 import Test.HUnit
 import Test.QuickCheck
@@ -33,11 +33,11 @@ testParsePosition =
 testParseStandardMove :: Test
 testParseStandardMove =
   TestList
-    [ "Parse standard move 1" ~: P.parse (parseStandardMove W) "K d4 f5" ~?= Right (SMoveC (Piece King W) (4, 4) (6, 5)),
-      "Parse standard move 2" ~: P.parse (parseStandardMove W) "Q e5 e6" ~?= Right (SMoveC (Piece Queen W) (5, 5) (5, 6)),
-      "Parse standard move 3" ~: P.parse (parseStandardMove B) "R f6 f5" ~?= Right (SMoveC (Piece Rook B) (6, 6) (6, 5)),
-      "Parse standard move 4" ~: P.parse (parseStandardMove B) "B g7 g6" ~?= Right (SMoveC (Piece Bishop B) (7, 7) (7, 6)),
-      "Parse standard move 5" ~: P.parse (parseStandardMove W) "N h3 h4" ~?= Right (SMoveC (Piece Knight W) (8, 3) (8, 4))
+    [ "Parse standard move 1" ~: P.parse (parseStandardMove W) "K d4 f5" ~?= Right (SMove (Piece King W) (4, 4) (6, 5)),
+      "Parse standard move 2" ~: P.parse (parseStandardMove W) "Q e5 e6" ~?= Right (SMove (Piece Queen W) (5, 5) (5, 6)),
+      "Parse standard move 3" ~: P.parse (parseStandardMove B) "R f6 f5" ~?= Right (SMove (Piece Rook B) (6, 6) (6, 5)),
+      "Parse standard move 4" ~: P.parse (parseStandardMove B) "B g7 g6" ~?= Right (SMove (Piece Bishop B) (7, 7) (7, 6)),
+      "Parse standard move 5" ~: P.parse (parseStandardMove W) "N h3 h4" ~?= Right (SMove (Piece Knight W) (8, 3) (8, 4))
     ]
 
 testParseLongCastle :: Test
@@ -63,13 +63,14 @@ testParsePromotion =
       "Parse promotion 4" ~: P.parse (parsePromotion W) "^N e7 e8" ~?= Right (Promotion (Piece Knight W) (5, 7) (5, 8))
     ]
 
-moveParserTests :: Test
-moveParserTests =
-  TestList
-    [ "Parse piece" ~: testParsePiece,
-      "Parse position" ~: testParsePosition,
-      "Parse standard move" ~: testParseStandardMove,
-      "Parse long castle" ~: testParseLongCastle,
-      "Parse short castle" ~: testParseShortCastle,
-      "Parse promotion" ~: testParsePromotion
-    ]
+test_all :: IO Counts
+test_all =
+  runTestTT $
+    TestList
+      [ "Parse piece" ~: testParsePiece,
+        "Parse position" ~: testParsePosition,
+        "Parse standard move" ~: testParseStandardMove,
+        "Parse long castle" ~: testParseLongCastle,
+        "Parse short castle" ~: testParseShortCastle,
+        "Parse promotion" ~: testParsePromotion
+      ]

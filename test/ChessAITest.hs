@@ -1,19 +1,20 @@
-module ChessScoringTest where
+module ChessAITest where
 
 import Chess
-import ChessScoring
+import ChessAI
 import Test.HUnit
 
 onePawn :: GameState
-onePawn = constructBoard [(('e', 2), Piece Pawn W)] W
+onePawn = constructBoard W [] [(('e', 2), Piece Pawn W)]
 
 sameFilePawns :: GameState
 sameFilePawns =
   constructBoard
+    W
+    []
     [ (('e', 2), Piece Pawn W),
       (('e', 3), Piece Pawn W)
     ]
-    W
 
 testPawnScore :: Test
 testPawnScore =
@@ -23,7 +24,11 @@ testPawnScore =
     ]
 
 oneBishop :: GameState
-oneBishop = constructBoard [(('e', 2), Piece Bishop W)] W
+oneBishop =
+  constructBoard
+    W
+    []
+    [(('e', 2), Piece Bishop W)]
 
 testBishopScore :: Test
 testBishopScore =
@@ -32,7 +37,7 @@ testBishopScore =
     ]
 
 oneKnight :: GameState
-oneKnight = constructBoard [(('e', 2), Piece Knight W)] W
+oneKnight = constructBoard W [] [(('e', 2), Piece Knight W)]
 
 testKnightScore :: Test
 testKnightScore =
@@ -41,7 +46,7 @@ testKnightScore =
     ]
 
 oneRook :: GameState
-oneRook = constructBoard [(('e', 2), Piece Rook W)] W
+oneRook = constructBoard W [] [(('e', 2), Piece Rook W)]
 
 testRookScore :: Test
 testRookScore =
@@ -50,7 +55,7 @@ testRookScore =
     ]
 
 oneQueen :: GameState
-oneQueen = constructBoard [(('e', 2), Piece Queen W)] W
+oneQueen = constructBoard W [] [(('e', 2), Piece Queen W)]
 
 testQueenScore :: Test
 testQueenScore =
