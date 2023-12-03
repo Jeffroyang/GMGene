@@ -125,6 +125,21 @@ testGameOver =
       "Game not over" ~: gameOver initBoard ~?= False
     ]
 
+testBoard10 :: GameState
+testBoard10 = constructBoard B [] [(('e', 1), Piece King W), (('c', 7), Piece Queen W), (('e', 8), Piece King B), (('h', 8), Piece Rook W)]
+
+testBoard11 :: GameState
+testBoard11 = constructBoard B [] [(('e', 1), Piece King W), (('g', 6), Piece Queen W), (('h', 8), Piece King B)]
+
+testResult :: Test
+testResult =
+  TestList
+    [ "Black wins" ~: checkResult testBoard9 ~?= BlackWin,
+      "No res" ~: checkResult initBoard ~?= InProgress,
+      "White wins" ~: checkResult testBoard10 ~?= WhiteWin,
+      "Draw" ~: checkResult testBoard11 ~?= Draw
+    ]
+
 -- -- | ¯\_(ツ)_/¯ TBD
 -- testEvaluate :: Test
 -- testEvaluate =
