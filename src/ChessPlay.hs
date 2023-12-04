@@ -45,22 +45,28 @@ getPlayerColor = do
       getPlayerColor
 
 -- | Gets a move from the user
-getUserMove :: Player -> IO C.Move
-getUserMove p = do
+getUserMove :: GameState -> IO C.Move
+getUserMove g = do
+  let p = player g
   putStr "Enter a move:"
   move <- getLine
   let parsedMove = P.parse (parseChessMove p) move
   case parsedMove of
     Left _ -> do
       putStrLn "Invalid move!"
-      getUserMove p
-    Right m -> return m
+      getUserMove g
+    Right m ->
+      if C.validMove g m
+        then return m
+        else do
+          putStrLn "Invalid move!"
+          getUserMove g
 
 -- | Plays a game of chess against another human
 playGameHuman :: GameState -> IO ()
 playGameHuman g = do
   print g
-  move <- getUserMove (player g)
+  move <- getUserMove g
   let newG = C.move g move
   case C.checkResult newG of
     BlackWin -> print newG >> putStrLn "Game Over! Black wins!"
@@ -92,7 +98,7 @@ playGameAI selected d g = do
   print g
   if currPlayer == selected
     then do
-      move <- getUserMove currPlayer
+      move <- getUserMove g
       let newG = C.move g move
       case C.checkResult newG of
         BlackWin -> print newG >> putStrLn "Game Over! Black wins!"

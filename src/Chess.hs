@@ -26,6 +26,7 @@ where
 
 import Data.Array
 import Data.Ix
+import Data.List
 import Data.Maybe
 
 data Color = B | W deriving (Show, Eq)
@@ -92,14 +93,14 @@ instance Show GameState where
 -- | display the board
 showBoard :: Board -> String
 showBoard board =
-  let frameRow = "  +------------------------+\n"
+  let frameRow = "  +---+---+---+---+---+---+---+---+\n"
       showRow :: Int -> String
       showRow r =
         let showPiece :: Maybe Piece -> String
-            showPiece Nothing = " . "
+            showPiece Nothing = "   "
             showPiece (Just p) = " " ++ show p ++ " "
-         in show r ++ " |" ++ concatMap (\c -> showPiece (board ! (c, r))) [1 .. 8] ++ "|\n"
-   in frameRow ++ concatMap showRow [8, 7 .. 1] ++ frameRow ++ "    a  b  c  d  e  f  g  h\n"
+         in show r ++ " |" ++ concatMap (\c -> showPiece (board ! (c, r)) ++ "|") [1 .. 8] ++ "\n"
+   in frameRow ++ intercalate frameRow (map showRow [8, 7 .. 1]) ++ frameRow ++ "    a   b   c   d   e   f   g   h\n"
 
 data Result = BlackWin | WhiteWin | Draw | InProgress deriving (Show, Eq)
 
