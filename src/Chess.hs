@@ -182,7 +182,13 @@ inCheck gs =
       p = player gs
       h = history gs
       cap = captured gs
-      kingPos = head $ map fst $ filter (\(_, piece) -> piece == Just (Piece King p)) (assocs b)
+      findKingPosition :: Board -> Color -> Position
+      findKingPosition board color =
+        let kingPositions = map fst $ filter (\(_, piece) -> piece == Just (Piece King p)) (assocs b)
+         in case kingPositions of
+              [] -> (-1, -1) -- dummy value since king must be on board
+              (x : _) -> x
+      kingPos = findKingPosition b p
    in kingPos
         `elem` map
           ( \case

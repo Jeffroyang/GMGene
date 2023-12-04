@@ -1,13 +1,29 @@
 module ChessTest where
 
 import Chess
+import Data.Array (elems, (!))
+import Data.Maybe (isJust)
 import Test.HUnit
 import Test.QuickCheck
 
 instance Arbitrary GameState where
-  arbitrary = undefined
+  arbitrary :: Gen GameState
+  -- simulate random number of turns (up to 100) to get a random board
+  arbitrary = do
+    n <- choose (0, 100)
+    foldr ($) (pure initBoard) (replicate n randomTransition)
+    where
+      randomTransition :: Gen GameState -> Gen GameState
+      randomTransition g = do
+        g <- g
+        let moves = generateMoves g
+        if null moves
+          then return g
+          else do
+            m <- elements moves
+            return $ move g m
 
-  shrink = undefined
+  shrink = const []
 
 -- in check state
 testBoard1 :: GameState
@@ -140,14 +156,173 @@ testResult =
       "Draw" ~: checkResult testBoard11 ~?= Draw
     ]
 
--- -- | ¯\_(ツ)_/¯ TBD
--- testEvaluate :: Test
--- testEvaluate =
---   TestList
---     [ "Evaluate 0" ~: evaluate initBoard ~?= 0,
---       "Evaluate 1" ~: evaluate testBoard1 ~?= 0,
---       "Evaluate 2" ~: evaluate testBoard2 ~?= 0
---     ]
+containsPieceTypeMove :: [Move] -> PieceType -> Bool
+containsPieceTypeMove [] _ = False
+containsPieceTypeMove (SMove (Piece pt _) _ _ : ms) pt' = pt == pt' || containsPieceTypeMove ms pt'
+containsPieceTypeMove (_ : ms) pt = containsPieceTypeMove ms pt
+
+-- pawns can only move forward at most 2 spaces
+prop_pawnsMoveForward :: GameState -> Property
+prop_pawnsMoveForward g = containsPieceTypeMove m Pawn ==> all (pawnsForward2 g) m
+  where
+    m = generateMoves g
+    pawnsForward2 :: GameState -> Move -> Bool
+    pawnsForward2 g (SMove (Piece Pawn _) (x, y) (x', y')) =
+      if player g == W
+        then y' - y <= 2
+        else y - y' <= 2
+    pawnsForward2 _ _ = True
+
+-- bishops can only move diagonally
+prop_bishopsMoveDiagonal :: GameState -> Property
+prop_bishopsMoveDiagonal g = containsPieceTypeMove m Bishop ==> all (bishopsDiagonal g) m
+  where
+    m = generateMoves g
+    bishopsDiagonal :: GameState -> Move -> Bool
+    bishopsDiagonal g (SMove (Piece Bishop _) (x, y) (x', y')) = abs (x - x') == abs (y - y')
+    bishopsDiagonal _ _ = True
+
+-- knights can only move in an L shape
+prop_knightsMoveL :: GameState -> Property
+prop_knightsMoveL g = containsPieceTypeMove m Knight ==> all (knightsL g) m
+  where
+    m = generateMoves g
+    knightsL :: GameState -> Move -> Bool
+    knightsL g (SMove (Piece Knight _) (x, y) (x', y')) =
+      abs (x - x') == 1 && abs (y - y') == 2 || abs (x - x') == 2 && abs (y - y') == 1
+    knightsL _ _ = True
+
+-- rooks can only move horizontally or vertically
+prop_rooksMoveHorizontalVertical :: GameState -> Property
+prop_rooksMoveHorizontalVertical g = containsPieceTypeMove m Rook ==> all (rooksHorizontalVertical g) m
+  where
+    m = generateMoves g
+    rooksHorizontalVertical :: GameState -> Move -> Bool
+    rooksHorizontalVertical g (SMove (Piece Rook _) (x, y) (x', y')) = x == x' || y == y'
+    rooksHorizontalVertical _ _ = True
+
+-- queens can only move horizontally, vertically, or diagonally
+prop_queensMoveHorizontalVerticalDiagonal :: GameState -> Property
+prop_queensMoveHorizontalVerticalDiagonal g = containsPieceTypeMove m Queen ==> all (queensHorizontalVerticalDiagonal g) m
+  where
+    m = generateMoves g
+    queensHorizontalVerticalDiagonal :: GameState -> Move -> Bool
+    queensHorizontalVerticalDiagonal g (SMove (Piece Queen _) (x, y) (x', y')) = x == x' || y == y' || abs (x - x') == abs (y - y')
+    queensHorizontalVerticalDiagonal _ _ = True
+
+-- kings can only move one space in any direction
+prop_kingsMoveOneSpace :: GameState -> Property
+prop_kingsMoveOneSpace g = containsPieceTypeMove m King ==> all (kingsOneSpace g) m
+  where
+    m = generateMoves g
+    kingsOneSpace :: GameState -> Move -> Bool
+    kingsOneSpace g (SMove (Piece King _) (x, y) (x', y')) = abs (x - x') <= 1 && abs (y - y') <= 1
+    kingsOneSpace _ _ = True
+
+-- make sure piece count is always under 32
+prop_pieceCount :: GameState -> Bool
+prop_pieceCount g =
+  let b = board g
+   in length (filter isJust (elems b)) <= 32
+
+-- making a valid move never leaves the king in check
+prop_kingSafeAfterMove :: GameState -> Bool
+prop_kingSafeAfterMove g = not (any (inCheck . gsForSamePlayer g) m)
+  where
+    b = board g
+    m = generateMoves g
+    p = player g
+    gsForSamePlayer :: GameState -> Move -> GameState
+    gsForSamePlayer gs m = (move gs m) {player = p}
+
+-- make sure the king is never in check before castling
+prop_kingNotInCheckPreCastle :: GameState -> Bool
+prop_kingNotInCheckPreCastle g = all (castle g) m
+  where
+    m = generateMoves g
+    castle :: GameState -> Move -> Bool
+    castle g (ShortCastle _) = not (inCheck g)
+    castle g (LongCastle _) = not (inCheck g)
+    castle _ _ = True
+
+-- make sure the king is never in check after castling
+prop_kingNotInCheckPostCastle :: GameState -> Bool
+prop_kingNotInCheckPostCastle g = all (castle g) m
+  where
+    m = generateMoves g
+    castle :: GameState -> Move -> Bool
+    castle g (ShortCastle p) = not (inCheck (move g (ShortCastle p)) {player = p})
+    castle g (LongCastle p) = not (inCheck (move g (LongCastle (player g))) {player = p})
+    castle _ _ = True
+
+-- make sure the king has never moved before castling
+prop_kingNeverMovedPreCastle :: GameState -> Bool
+prop_kingNeverMovedPreCastle g = all (castle g) m
+  where
+    m = generateMoves g
+    h = history g
+    p = player g
+    kingMoved :: [Move] -> Color -> Bool
+    kingMoved [] _ = False
+    kingMoved (ShortCastle p : ms) c = p == c || kingMoved ms c
+    kingMoved (LongCastle p : ms) c = p == c || kingMoved ms c
+    kingMoved ((SMove (Piece King p) _ _) : ms) c = p == c || kingMoved ms c
+    kingMoved (_ : ms) c = kingMoved ms c
+
+    castle :: GameState -> Move -> Bool
+    castle g (ShortCastle _) = not (kingMoved h p)
+    castle g (LongCastle _) = not (kingMoved h p)
+    castle _ _ = True
+
+-- make sure that en passant is only possible immediately after a pawn moves 2 spaces
+prop_enPassantable :: GameState -> Bool
+prop_enPassantable g = all (enPassant g) m
+  where
+    m = generateMoves g
+    h = history g
+    enPassant :: GameState -> Move -> Bool
+    enPassant g (EnPassant (Piece Pawn p) (x, y) (x', y')) =
+      case h of
+        [] -> False
+        (SMove (Piece Pawn p') (x'', y'') (x''', y''') : _) ->
+          p /= p'
+            && x' == x''' -- pawn must move into the square behind the other pawn
+            && abs (y - y') == 1
+            && abs (y'' - y''') == 2 -- other pawn must move two spaces vertically
+        _ -> False
+    enPassant _ _ = True
+
+-- make sure that promotion is only possible when a pawn reaches the end of the board
+prop_promotionRanks :: GameState -> Bool
+prop_promotionRanks g = all (promotion g) m
+  where
+    m = generateMoves g
+    promotion :: GameState -> Move -> Bool
+    promotion g (Promotion (Piece Pawn p) (x, y) (x', y')) =
+      case p of
+        W -> y' == 8
+        B -> y' == 1
+    promotion _ _ = True
+
+-- make sure that promoted pawns are replaced with the correct piece
+prop_promotionPiece :: GameState -> Bool
+prop_promotionPiece g = all (promotion g) m
+  where
+    m = generateMoves g
+    promotion :: GameState -> Move -> Bool
+    promotion g (Promotion (Piece Pawn _) (x, y) (x', y')) = False
+    promotion g (Promotion (Piece King _) (x, y) (x', y')) = False
+    promotion g m@(Promotion p (x, y) (x', y')) = board (move g m) ! (x', y') == Just p
+    promotion _ _ = True
+
+-- make sure that all moves are in bounds
+prop_allMovesInBounds :: GameState -> Bool
+prop_allMovesInBounds g = all (inBounds g) m
+  where
+    m = generateMoves g
+    inBounds :: GameState -> Move -> Bool
+    inBounds g (SMove _ (x, y) (x', y')) = x' >= 1 && x' <= 8 && y' >= 1 && y' <= 8
+    inBounds _ _ = True
 
 test_all :: IO Counts
 test_all =
@@ -156,3 +331,21 @@ test_all =
       [ testValidMove,
         testGameOver
       ]
+
+qc :: IO ()
+qc = do
+  quickCheck prop_pawnsMoveForward
+  quickCheck prop_bishopsMoveDiagonal
+  quickCheck prop_knightsMoveL
+  quickCheck prop_rooksMoveHorizontalVertical
+  quickCheck prop_queensMoveHorizontalVerticalDiagonal
+  quickCheck prop_kingsMoveOneSpace
+  quickCheck prop_pieceCount
+  quickCheck prop_kingSafeAfterMove
+  quickCheck prop_kingNotInCheckPreCastle
+  quickCheck prop_kingNotInCheckPostCastle
+  quickCheck prop_kingNeverMovedPreCastle
+  quickCheck prop_enPassantable
+  quickCheck prop_promotionRanks
+  quickCheck prop_promotionPiece
+  quickCheck prop_allMovesInBounds

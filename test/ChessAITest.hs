@@ -62,3 +62,12 @@ testQueenScore =
   TestList
     [ "Queen score 1" ~: queenScore oneQueen ~?= 900
     ]
+
+-- -- | ¯\_(ツ)_/¯ TBD
+-- testEvaluate :: Test
+-- testEvaluate =
+--   TestList
+--     [ "Evaluate 0" ~: evaluate initBoard ~?= 0,
+--       "Evaluate 1" ~: evaluate testBoard1 ~?= 0,
+--       "Evaluate 2" ~: evaluate testBoard2 ~?= 0
+--     ]
