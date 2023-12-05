@@ -12,44 +12,57 @@ import Data.Ord (comparing)
 class (Ord (Move g)) => SearchableGame g where
   type Move g
   type Player g
-  update :: g -> Move g -> g
-  gameOver :: g -> Bool
+  update :: g -> Move g -> g -- Updates the game state with a move
+  gameOver :: g -> Bool -- Whether the game is over
   evaluate :: g -> Player g -> Int -- Passed in player is the maximizing player
-  generateMoves :: g -> [Move g]
+  generateMoves :: g -> [Move g] -- All the possible moves from a given game state
+  player :: g -> Player g -- The player whose turn it is
 
-data GameTree g = TreeNode g (Map.Map (Move g) (GameTree g))
+-- data GameTree g = TreeNode g (Map.Map (Move g) (GameTree g))
 
 -- | Search the tree for the best move up to a certain depth
-minimaxSearch :: forall g. (SearchableGame g) => g -> Player g -> Int -> Move g
-minimaxSearch g p 0 = error "Cannot search to depth 0"
-minimaxSearch g p d = fst $ maximumBy (comparing snd) (map (\m -> (m, mini (update g m) (d - 1))) (generateMoves g))
+minimaxSearch :: forall g. (SearchableGame g) => g -> Int -> Move g
+minimaxSearch _ 0 = error "Cannot search to depth 0"
+minimaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, mini (update g m) (d - 1))) (generateMoves g))
   where
+    p = player g
     maxi :: (SearchableGame g) => g -> Int -> Int
     maxi g 0 = evaluate g p
-    maxi g d = case generateMoves g of
-      [] -> evaluate g p
-      ms -> maximum (map (\m -> mini (update g m) (d - 1)) ms)
+    maxi g d =
+      if gameOver g
+        then evaluate g p
+        else case generateMoves g of
+          [] -> evaluate g p
+          ms -> maximum (map (\m -> mini (update g m) (d - 1)) ms)
 
     mini :: (SearchableGame g) => g -> Int -> Int
     mini g 0 = evaluate g p
-    mini g d = case generateMoves g of
-      [] -> evaluate g p
-      ms -> minimum (map (\m -> maxi (update g m) (d - 1)) ms)
+    mini g d =
+      if gameOver g
+        then evaluate g p
+        else case generateMoves g of
+          [] -> evaluate g p
+          ms -> minimum (map (\m -> maxi (update g m) (d - 1)) ms)
 
 -- | Search the tree for the best move up to a certain depth
-negamaxSearch :: forall g. (SearchableGame g) => g -> Player g -> Int -> Move g
-negamaxSearch g p 0 = error "Cannot search to depth 0"
-negamaxSearch g p d = fst $ maximumBy (comparing snd) (map (\m -> (m, -negamax (update g m) (d - 1))) (generateMoves g))
+negamaxSearch :: forall g. (SearchableGame g) => g -> Int -> Move g
+negamaxSearch _ 0 = error "Cannot search to depth 0"
+negamaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) (generateMoves g))
   where
     negamax :: (SearchableGame g) => g -> Int -> Int
-    negamax g 0 = evaluate g p
-    negamax g d = case generateMoves g of
-      [] -> if gameOver g then evaluate g p else -negamax g (d - 1)
-      ms -> maximum (map (\m -> -negamax (update g m) (d - 1)) ms)
+    negamax g 0 = evaluate g p where p = player g
+    negamax g d =
+      if gameOver g
+        then evaluate g p
+        else case generateMoves g of
+          [] -> evaluate g p
+          ms -> maximum (map (\m -> -(negamax (update g m) (d - 1))) ms)
+      where
+        p = player g
 
 -- | updates the game tree with a move
-updateGameTree :: (SearchableGame g) => GameTree g -> Move g -> Maybe (GameTree g)
-updateGameTree (TreeNode g children) move = children Map.!? move
+-- updateGameTree :: (SearchableGame g) => GameTree g -> Move g -> Maybe (GameTree g)
+-- updateGameTree (TreeNode g children) move = children Map.!? move
 
 -- | Iteratively deepening depth-first search
 iddfs :: (SearchableGame g) => Int -> g -> Move g

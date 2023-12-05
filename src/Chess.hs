@@ -108,7 +108,8 @@ instance Arbitrary GameState where
             m <- elements moves
             return $ move g m
 
-  shrink = const []
+  shrink :: GameState -> [GameState]
+  shrink gs = [move gs m | m <- generateMoves gs]
 
 -- | display the board
 showBoard :: Board -> String

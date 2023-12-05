@@ -231,3 +231,6 @@ instance G.SearchableGame GameState where
 
   generateMoves :: GameState -> [C.Move]
   generateMoves = C.generateMoves
+
+  player :: GameState -> C.Player
+  player = C.player

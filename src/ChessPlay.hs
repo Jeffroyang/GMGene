@@ -6,7 +6,7 @@ import ChessParser
 import ChessSimpleAI qualified as SimpleAI
 import Control.Monad.State.Lazy
 import Data.Array
-import GameAI
+import GameAI qualified as G
 import Parser qualified as P
 import Text.Read (readMaybe)
 
@@ -108,7 +108,7 @@ playGameAI selected d g = do
         InProgress -> playGameAI selected d newG
     else do
       putStrLn "AI is thinking..."
-      let move = minimaxSearch g currPlayer d
+      let move = G.minimaxSearch g d
           newG = C.move g move
       case C.checkResult newG of
         BlackWin -> print newG >> putStrLn "Game Over! Black wins!"

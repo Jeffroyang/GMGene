@@ -1,22 +1,26 @@
 module GameAITest where
 
-import Chess
+import Chess qualified as C
 import ChessSimpleAI
-import ChessTest ()
 import GameAI
-  ( alphaBetaSearch,
-    iddfs,
-    minimaxSearch,
-  )
 import Test.HUnit
 import Test.QuickCheck
 
-prop_IterativeDeepeningSearch :: Int -> GameState -> Bool
-prop_IterativeDeepeningSearch d g =
-  let p = player g
-   in minimaxSearch g p d == iddfs d g
+newtype SmallInt = SmallInt Int deriving (Show)
 
-prop_AlphaBetaPrunedSearch :: Int -> GameState -> Bool
-prop_AlphaBetaPrunedSearch d g =
-  let p = player g
-   in minimaxSearch g p d == alphaBetaSearch d g
+instance Arbitrary SmallInt where
+  arbitrary = do
+    n <- choose (1, 2)
+    return $ SmallInt n
+
+prop_negamaxSearch :: SmallInt -> C.GameState -> Property
+prop_negamaxSearch (SmallInt d) g =
+  not (gameOver g) ==> minimaxSearch g d == negamaxSearch g d
+
+prop_IterativeDeepeningSearch :: SmallInt -> C.GameState -> Property
+prop_IterativeDeepeningSearch (SmallInt d) g =
+  not (gameOver g) ==> minimaxSearch g d == iddfs d g
+
+prop_AlphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
+prop_AlphaBetaPrunedSearch (SmallInt d) g =
+  not (gameOver g) ==> minimaxSearch g d == alphaBetaSearch d g
