@@ -19,8 +19,8 @@ prop_negamaxSearch (SmallInt d) g =
 
 prop_IterativeDeepeningSearch :: SmallInt -> C.GameState -> Property
 prop_IterativeDeepeningSearch (SmallInt d) g =
-  not (gameOver g) ==> minimaxSearch g d == iddfs d g
+  not (gameOver g) ==> minimaxSearch g d == iddfs g d
 
 prop_AlphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
 prop_AlphaBetaPrunedSearch (SmallInt d) g =
-  not (gameOver g) ==> minimaxSearch g d == alphaBetaSearch d g
+  not (gameOver g) ==> minimaxSearch g d == alphaBetaSearch g d

@@ -22,8 +22,10 @@ class (Ord (Move g)) => SearchableGame g where
 
 -- | Search the tree for the best move up to a certain depth
 minimaxSearch :: forall g. (SearchableGame g) => g -> Int -> Move g
-minimaxSearch _ 0 = error "Cannot search to depth 0"
-minimaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, mini (update g m) (d - 1))) (generateMoves g))
+minimaxSearch g d
+  | d <= 0 = error "Cannot search to depth < 0"
+  | otherwise =
+      fst $ maximumBy (comparing snd) (map (\m -> (m, mini (update g m) (d - 1))) (generateMoves g))
   where
     p = player g
     maxi :: (SearchableGame g) => g -> Int -> Int
@@ -46,8 +48,10 @@ minimaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, mini (update
 
 -- | Search the tree for the best move up to a certain depth
 negamaxSearch :: forall g. (SearchableGame g) => g -> Int -> Move g
-negamaxSearch _ 0 = error "Cannot search to depth 0"
-negamaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) (generateMoves g))
+negamaxSearch g d
+  | d <= 0 = error "Cannot search to depth < 0"
+  | otherwise =
+      fst $ maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) (generateMoves g))
   where
     negamax :: (SearchableGame g) => g -> Int -> Int
     negamax g 0 = evaluate g p where p = player g
@@ -65,9 +69,9 @@ negamaxSearch g d = fst $ maximumBy (comparing snd) (map (\m -> (m, -(negamax (u
 -- updateGameTree (TreeNode g children) move = children Map.!? move
 
 -- | Iteratively deepening depth-first search
-iddfs :: (SearchableGame g) => Int -> g -> Move g
-iddfs d g = undefined
+iddfs :: (SearchableGame g) => g -> Int -> Move g
+iddfs g d = undefined
 
 -- | Search the tree for the best move up to a certain depth
-alphaBetaSearch :: (SearchableGame g) => Int -> g -> Move g
-alphaBetaSearch d g = undefined
+alphaBetaSearch :: (SearchableGame g) => g -> Int -> Move g
+alphaBetaSearch g d = undefined
