@@ -207,9 +207,14 @@ simpleEval gs perspective =
       pieceValue = evaluatePieceValues counts
       endgame = isEndgame counts
       pstValue = evaluatePST b endgame
+      boardValue = case checkResult gs of
+        WhiteWin -> 1000000
+        BlackWin -> -1000000
+        Draw -> -500000
+        InProgress -> pieceValue + pstValue
    in if perspective == W
-        then pieceValue + pstValue
-        else -(pieceValue + pstValue)
+        then boardValue
+        else -boardValue
 
 instance G.SearchableGame GameState where
   type Move GameState = C.Move
