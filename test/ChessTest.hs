@@ -6,25 +6,6 @@ import Data.Maybe (isJust)
 import Test.HUnit
 import Test.QuickCheck
 
-instance Arbitrary GameState where
-  arbitrary :: Gen GameState
-  -- simulate random number of turns (up to 100) to get a random board
-  arbitrary = do
-    n <- choose (0, 100)
-    foldr ($) (pure initBoard) (replicate n randomTransition)
-    where
-      randomTransition :: Gen GameState -> Gen GameState
-      randomTransition g = do
-        g <- g
-        let moves = generateMoves g
-        if null moves
-          then return g
-          else do
-            m <- elements moves
-            return $ move g m
-
-  shrink = const []
-
 -- in check state
 testBoard1 :: GameState
 testBoard1 =

@@ -42,9 +42,9 @@ library
       common-stanza
   exposed-modules:
       Chess
-      ChessAI
       ChessParser
       ChessPlay
+      ChessSimpleAI
       GameAI
       Parser
       -- if you add modules to your project, list them here

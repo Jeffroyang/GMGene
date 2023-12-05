@@ -28,16 +28,17 @@ import Data.Array
 import Data.Ix
 import Data.List
 import Data.Maybe
+import Test.QuickCheck (Arbitrary (..), Gen, choose, elements, shrink)
 
-data Color = B | W deriving (Show, Eq)
+data Color = B | W deriving (Show, Eq, Ord)
 
-data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq)
+data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq, Ord)
 
 -- | row col representation of a position for easier translation
 type Position = (Int, Int)
 
 data Piece = Piece {pieceType :: PieceType, pieceColor :: Color}
-  deriving (Eq)
+  deriving (Eq, Ord)
 
 instance Show Piece where
   show :: Piece -> String
@@ -89,6 +90,25 @@ instance Show GameState where
       ++ "\n"
       ++ "Current Player: "
       ++ show player
+
+instance Arbitrary GameState where
+  arbitrary :: Gen GameState
+  -- simulate random number of turns (up to 100) to get a random board
+  arbitrary = do
+    n <- choose (0, 100)
+    foldr ($) (pure initBoard) (replicate n randomTransition)
+    where
+      randomTransition :: Gen GameState -> Gen GameState
+      randomTransition g = do
+        g <- g
+        let moves = generateMoves g
+        if null moves
+          then return g
+          else do
+            m <- elements moves
+            return $ move g m
+
+  shrink = const []
 
 -- | display the board
 showBoard :: Board -> String

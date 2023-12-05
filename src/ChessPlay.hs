@@ -2,8 +2,8 @@ module ChessPlay where
 
 import Chess
 import Chess qualified as C
-import ChessAI
 import ChessParser
+import ChessSimpleAI qualified as SimpleAI
 import Control.Monad.State.Lazy
 import Data.Array
 import GameAI
@@ -33,7 +33,7 @@ playGame = do
       playGame
 
 -- | Gets the player's color
-getPlayerColor :: IO Player
+getPlayerColor :: IO C.Player
 getPlayerColor = do
   putStrLn "Would you like to play as White or Black? (W/B)"
   player <- getLine
@@ -92,7 +92,7 @@ getSearchDepth = do
           getSearchDepth
 
 -- | Plays a game of chess against the AI
-playGameAI :: Player -> Int -> GameState -> IO ()
+playGameAI :: C.Player -> Int -> GameState -> IO ()
 playGameAI selected d g = do
   let currPlayer = player g
   print g

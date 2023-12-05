@@ -4,9 +4,10 @@ module GameAI where
 
 class SearchableGame g where
   type Move g
+  type Player g
   update :: g -> Move g -> g
   gameOver :: g -> Bool
-  evaluate :: g -> Int
+  evaluate :: g -> Player g -> Int
   generateMoves :: g -> [Move g]
 
 data Tree a = Node a [Tree a] deriving (Show)

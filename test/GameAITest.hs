@@ -1,7 +1,7 @@
 module GameAITest where
 
 import Chess
-import ChessAI
+import ChessSimpleAI
 import ChessTest ()
 import GameAI
   ( alphaBetaSearch,
