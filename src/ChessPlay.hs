@@ -8,6 +8,7 @@ import Control.Monad.State.Lazy
 import Data.Array
 import GameAI
 import Parser qualified as P
+import Text.Read (readMaybe)
 
 -- | Starts a new game of chess
 playGame :: IO ()
@@ -79,7 +80,7 @@ getSearchDepth :: IO Int
 getSearchDepth = do
   putStr "Enter search depth (1-3):"
   depth <- getLine
-  let parsedDepth = read depth :: Maybe Int
+  let parsedDepth = readMaybe depth :: Maybe Int
   case parsedDepth of
     Nothing -> do
       putStrLn "Invalid depth!"
@@ -107,8 +108,8 @@ playGameAI selected d g = do
         InProgress -> playGameAI selected d newG
     else do
       putStrLn "AI is thinking..."
-      let move = alphaBetaSearch d g
-      let newG = C.move g move
+      let move = minimaxSearch g currPlayer d
+          newG = C.move g move
       case C.checkResult newG of
         BlackWin -> print newG >> putStrLn "Game Over! Black wins!"
         WhiteWin -> print newG >> putStrLn "Game Over! White wins!"

@@ -12,7 +12,11 @@ import Test.HUnit
 import Test.QuickCheck
 
 prop_IterativeDeepeningSearch :: Int -> GameState -> Bool
-prop_IterativeDeepeningSearch d g = minimaxSearch d g == iddfs d g
+prop_IterativeDeepeningSearch d g =
+  let p = player g
+   in minimaxSearch g p d == iddfs d g
 
 prop_AlphaBetaPrunedSearch :: Int -> GameState -> Bool
-prop_AlphaBetaPrunedSearch d g = minimaxSearch d g == alphaBetaSearch d g
+prop_AlphaBetaPrunedSearch d g =
+  let p = player g
+   in minimaxSearch g p d == alphaBetaSearch d g

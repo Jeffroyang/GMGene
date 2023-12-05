@@ -64,7 +64,7 @@ data Move
   | LongCastle Color -- O-O-O
   | Promotion {piece :: Piece, from :: Position, to :: Position} -- pawn promotion to piece at position (to) from position (from) (assumed pawn)
   | EnPassant {piece :: Piece, from :: Position, to :: Position} -- en passant capture
-  deriving (Eq, Show)
+  deriving (Eq, Show, Ord)
 
 type History = [Move]
 
