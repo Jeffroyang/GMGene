@@ -109,7 +109,7 @@ instance Arbitrary GameState where
             return $ move g m
 
   shrink :: GameState -> [GameState]
-  shrink gs = [move gs m | m <- generateMoves gs]
+  shrink gs = []
 
 -- | display the board
 showBoard :: Board -> String

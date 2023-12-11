@@ -108,7 +108,7 @@ playGameAI selected d g = do
         InProgress -> playGameAI selected d newG
     else do
       putStrLn "AI is thinking..."
-      let move = G.minimaxSearch g d
+      let move = fst $ G.alphaBetaSearch g d
           newG = C.move g move
       case C.checkResult newG of
         BlackWin -> print newG >> putStrLn "Game Over! Black wins!"

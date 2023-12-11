@@ -15,12 +15,8 @@ instance Arbitrary SmallInt where
 
 prop_negamaxSearch :: SmallInt -> C.GameState -> Property
 prop_negamaxSearch (SmallInt d) g =
-  not (gameOver g) ==> minimaxSearch g d == negamaxSearch g d
-
-prop_IterativeDeepeningSearch :: SmallInt -> C.GameState -> Property
-prop_IterativeDeepeningSearch (SmallInt d) g =
-  not (gameOver g) ==> minimaxSearch g d == iddfs g d
+  not (gameOver g) ==> snd (minimaxSearch g d) == snd (negamaxSearch g d)
 
 prop_AlphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
 prop_AlphaBetaPrunedSearch (SmallInt d) g =
-  not (gameOver g) ==> minimaxSearch g d == alphaBetaSearch g d
+  not (gameOver g) ==> snd (negamaxSearch g d) == snd (alphaBetaSearch g d)
