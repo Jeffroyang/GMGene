@@ -208,9 +208,9 @@ simpleEval gs perspective =
       endgame = isEndgame counts
       pstValue = evaluatePST b endgame
       boardValue = case checkResult gs of
-        WhiteWin -> 1000000
-        BlackWin -> -1000000
-        Draw -> -500000
+        WhiteWin -> 100000
+        BlackWin -> -100000
+        Draw -> -50000
         InProgress -> pieceValue + pstValue
    in if perspective == W
         then boardValue

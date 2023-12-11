@@ -67,11 +67,11 @@ negamaxSearch g d
 alphaBetaSearch :: forall g. (SearchableGame g) => g -> Int -> (Move g, Int)
 alphaBetaSearch g d
   | d <= 0 = error "Cannot search to depth < 0"
-  | otherwise = foldl' aux (head initMoves, -100000000) initMoves
+  | otherwise = foldl aux (head initMoves, minBound) initMoves
   where
     aux :: (SearchableGame g) => (Move g, Int) -> Move g -> (Move g, Int)
     aux (m, a) m' =
-      let score = alphaBetaMin (update g m') p (d - 1) a 100000000
+      let score = alphaBetaMin (update g m') p (d - 1) a maxBound
        in if score > a then (m', score) else (m, a)
 
     initMoves = generateMoves g
