@@ -260,6 +260,43 @@ accReachable c board src@(x, y) translate@(x', y') acc =
           Just (Piece _ c2) -> if c == c2 then acc else pos : acc
         else acc
 
+-- helper for if a pawn can take a position
+pawnTakeable :: Position -> Color -> Board -> Bool
+pawnTakeable pos@(tx, ty) c b =
+  onBoard pos
+    && ( isJust (b ! pos)
+           && pieceColor (fromJust (b ! pos)) /= c
+       )
+
+-- helper for checking if a position is en passantable
+enPassant :: Position -> History -> Color -> Bool
+enPassant pos@(tx, ty) h c =
+  onBoard pos
+    && ( not (null h) && case head h of -- en passant
+           SMove (Piece Pawn c2) from to ->
+             c2 /= c
+               && from == (tx, ty + forward)
+               && to == (tx, ty - forward)
+           _ -> False
+       )
+  where
+    forward = if c == W then 1 else -1
+
+-- helper for expanding pawn promotion moves
+expandPromotionMoves :: Move -> [Move]
+expandPromotionMoves m@(SMove p@(Piece Pawn c) from to@(x, y)) =
+  if (c == W && y == 8) || (c == B && y == 1)
+    then
+      map
+        (\pt -> Promotion (Piece pt c) from to)
+        [ Queen,
+          Rook,
+          Bishop,
+          Knight
+        ]
+    else [m]
+expandPromotionMoves m = [m]
+
 -- | generate all psuedo legal moves for a given position
 genPsuedoMovesPos :: GameState -> Position -> [Move]
 genPsuedoMovesPos gs pos@(f, r) =
@@ -280,7 +317,7 @@ genPsuedoMovesPos gs pos@(f, r) =
                   ( map
                       (SMove p pos)
                       ( filter
-                          (\x -> onBoard x && takeable x)
+                          (\x -> onBoard x && pawnTakeable x c b)
                           [ (f + 1, r + forward),
                             (f - 1, r + forward)
                           ]
@@ -288,7 +325,7 @@ genPsuedoMovesPos gs pos@(f, r) =
                       ++ map
                         (EnPassant p pos)
                         ( filter
-                            (\x -> onBoard x && enPassant x)
+                            (\x -> onBoard x && enPassant x h c)
                             [ (f + 1, r + forward),
                               (f - 1, r + forward)
                             ]
@@ -307,38 +344,6 @@ genPsuedoMovesPos gs pos@(f, r) =
                 where
                   f1 = (f, r + forward)
                   f2 = (f, r + 2 * forward)
-                  -- if takeable moves are valid(enemy piece there)
-                  takeable :: Position -> Bool
-                  takeable pos@(tx, ty) =
-                    onBoard pos
-                      && ( isJust (b ! pos)
-                             && pieceColor (fromJust (b ! pos)) /= c
-                         )
-                  -- en passantable
-                  enPassant :: Position -> Bool
-                  enPassant pos@(tx, ty) =
-                    onBoard pos
-                      && ( not (null h) && case head h of -- en passant
-                             SMove (Piece Pawn c2) from to ->
-                               c2 /= c
-                                 && from == (tx, ty + forward)
-                                 && to == (tx, ty - forward)
-                             _ -> False
-                         )
-                  -- expand moves that promote(only standard moves, en passant does not go to last rank)
-                  expandPromotionMoves :: Move -> [Move]
-                  expandPromotionMoves m@(SMove p@(Piece Pawn c) from to@(x, y)) =
-                    if (c == W && y == 8) || (c == B && y == 1)
-                      then
-                        map
-                          (\pt -> Promotion (Piece pt c) from to)
-                          [ Queen,
-                            Rook,
-                            Bishop,
-                            Knight
-                          ]
-                      else [m]
-                  expandPromotionMoves m = [m]
               -- knight just translate all possible and filter out invalid
               Knight ->
                 map (SMove p pos) $
