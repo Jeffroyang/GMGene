@@ -79,6 +79,7 @@ alphaBetaSearch g d
     initMoves = generateMoves g
     p = player g
 
+-- | Alpha-beta pruning for the maximizing player
 alphaBetaMax :: forall g. (SearchableGame g) => g -> Player g -> Int -> Int -> Int -> Int
 alphaBetaMax g p 0 a b = evaluate g p
 alphaBetaMax g p d a b =
@@ -94,6 +95,7 @@ alphaBetaMax g p d a b =
                in if score >= b' then b' else evalMax (max a' score) b' ms'
          in evalMax a b ms
 
+-- | Alpha-beta pruning for the minimizing player
 alphaBetaMin :: forall g. (SearchableGame g) => g -> Player g -> Int -> Int -> Int -> Int
 alphaBetaMin g p 0 a b = evaluate g p
 alphaBetaMin g p d a b =

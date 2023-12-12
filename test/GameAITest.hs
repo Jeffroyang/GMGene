@@ -65,10 +65,23 @@ simulateGameAsWhite g algo depth steps =
 -- WhiteWin
 -- (34.09 secs, 199,807,500,032 bytes)
 
--- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 3 20
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 3 52
 -- WhiteWin
 -- (8.31 secs, 48,411,535,008 bytes)
 
 -- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 4 52
 -- WhiteWin
--- (8.31 secs, 48,411,535,008 bytes)
+-- (71.13 secs, 387,414,819,592 bytes)
+
+-- Alpha Beta Pruning Benchmarks after adding move ordering
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 2 52
+-- WhiteWin
+-- (0.33 secs, 1,755,410,480 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 3 52
+-- WhiteWin
+-- (4.28 secs, 24,529,876,992 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 4 52
+-- WhiteWin
+-- (21.53 secs, 118,525,111,368 bytes)

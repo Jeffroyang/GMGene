@@ -21,6 +21,7 @@ module Chess
     showBoard,
     constructBoard,
     generateMoves,
+    generateOrderedMoves,
   )
 where
 
@@ -71,7 +72,7 @@ data Move
   | LongCastle Color -- O-O-O
   | Promotion {piece :: Piece, from :: Position, to :: Position} -- pawn promotion to piece at position (to) from position (from) (assumed pawn)
   | EnPassant {piece :: Piece, from :: Position, to :: Position} -- en passant capture
-  deriving (Eq, Show, Ord)
+  deriving (Eq, Show)
 
 type History = [Move]
 
@@ -83,6 +84,22 @@ data GameState = GameState
     captured :: [Piece],
     board :: Board
   }
+
+instance Ord Move where
+  compare :: Move -> Move -> Ordering
+  compare Promotion {} Promotion {} = EQ
+  compare Promotion {} _ = GT
+  compare _ Promotion {} = LT
+  compare EnPassant {} EnPassant {} = EQ
+  compare EnPassant {} _ = GT
+  compare _ EnPassant {} = LT
+  compare ShortCastle {} ShortCastle {} = EQ
+  compare ShortCastle {} _ = GT
+  compare _ ShortCastle {} = LT
+  compare LongCastle {} LongCastle {} = EQ
+  compare LongCastle {} _ = GT
+  compare _ LongCastle {} = LT
+  compare SMove {} SMove {} = EQ
 
 instance Show GameState where
   show :: GameState -> String
@@ -519,6 +536,22 @@ generateMoves gs@(GameState p h cap board) =
     )
     (indices board)
     ++ genCastleMoves gs
+
+-- generate all legal moves ordered by heuristic goodness
+generateOrderedMoves :: GameState -> [Move]
+generateOrderedMoves gs@(GameState p h cap board) =
+  let moves = generateMoves gs
+      isCaptureMove :: GameState -> Move -> Bool
+      isCaptureMove gs m = case m of
+        SMove _ _ to -> onBoard to && isJust (board ! to)
+        EnPassant {} -> True
+        _ -> False
+      orderMoves :: Move -> Move -> Ordering
+      orderMoves m1 m2
+        | isCaptureMove gs m1 && not (isCaptureMove gs m2) = LT
+        | not (isCaptureMove gs m1) && isCaptureMove gs m2 = GT
+        | otherwise = compare m1 m2
+   in sortBy orderMoves moves
 
 -- update board with a move
 updateBoard :: Board -> Move -> Board

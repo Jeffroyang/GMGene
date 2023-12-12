@@ -88,9 +88,6 @@ rookPST =
         ]
     )
 
--- >>> rookPST ! (2, 7)
--- 10
-
 queenPST :: Array (Int, Int) Int
 queenPST =
   listArray
@@ -208,9 +205,9 @@ simpleEval gs perspective =
       endgame = isEndgame counts
       pstValue = evaluatePST b endgame
       boardValue = case checkResult gs of
-        WhiteWin -> 100000
-        BlackWin -> -100000
-        Draw -> -50000
+        WhiteWin -> maxBound
+        BlackWin -> minBound
+        Draw -> 0
         InProgress -> pieceValue + pstValue
    in if perspective == W
         then boardValue
@@ -230,7 +227,7 @@ instance G.SearchableGame GameState where
   evaluate = simpleEval
 
   generateMoves :: GameState -> [C.Move]
-  generateMoves = C.generateMoves
+  generateMoves = C.generateOrderedMoves
 
   player :: GameState -> C.Player
   player = C.player
