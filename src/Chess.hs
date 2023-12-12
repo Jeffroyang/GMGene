@@ -218,10 +218,9 @@ inCheck gs =
       cap = captured gs
       findKingPosition :: Board -> Color -> Position
       findKingPosition board color =
-        let kingPositions = map fst $ filter (\(_, piece) -> piece == Just (Piece King p)) (assocs b)
-         in case kingPositions of
-              [] -> (-1, -1) -- dummy value since king must be on board
-              (x : _) -> x
+        case map fst $ filter (\(_, piece) -> piece == Just (Piece King p)) (assocs b) of
+          [] -> (-1, -1) -- dummy value since king must be on board
+          (x : _) -> x
       kingPos = findKingPosition b p
    in kingPos
         `elem` map
@@ -276,34 +275,68 @@ genPsuedoMovesPos gs pos@(f, r) =
               -- check normal 1 sq move, 2 sq move(if on starting sq), and takeable diagonals
               Pawn ->
                 -- combine normal take moves, en passant moves, normal advance moves, expand all that result in promotions
-                let pmoves =
-                      map (SMove p pos) (filter (\x -> onBoard x && takeable x) [(f + 1, r + forward), (f - 1, r + forward)])
-                        ++ map (EnPassant p pos) (filter (\x -> onBoard x && enPassant x) [(f + 1, r + forward), (f - 1, r + forward)])
-                        ++ map (SMove p pos) ([f1 | onBoard f1, isNothing (b ! f1)] ++ [f2 | onBoard f2, isNothing (b ! f2), isNothing (b ! f1), if c == W then r == 2 else r == 7])
-                 in concatMap expandPromotionMoves pmoves
+                concatMap
+                  expandPromotionMoves
+                  ( map
+                      (SMove p pos)
+                      ( filter
+                          (\x -> onBoard x && takeable x)
+                          [ (f + 1, r + forward),
+                            (f - 1, r + forward)
+                          ]
+                      )
+                      ++ map
+                        (EnPassant p pos)
+                        ( filter
+                            (\x -> onBoard x && enPassant x)
+                            [ (f + 1, r + forward),
+                              (f - 1, r + forward)
+                            ]
+                        )
+                      ++ map
+                        (SMove p pos)
+                        ( [f1 | onBoard f1, isNothing (b ! f1)]
+                            ++ [ f2
+                                 | onBoard f2,
+                                   isNothing (b ! f2),
+                                   isNothing (b ! f1),
+                                   if c == W then r == 2 else r == 7
+                               ]
+                        )
+                  )
                 where
                   f1 = (f, r + forward)
                   f2 = (f, r + 2 * forward)
                   -- if takeable moves are valid(enemy piece there)
                   takeable :: Position -> Bool
                   takeable pos@(tx, ty) =
-                    let qp = b ! pos
-                     in onBoard pos && (isJust qp && pieceColor (fromJust qp) /= c)
+                    onBoard pos
+                      && ( isJust (b ! pos)
+                             && pieceColor (fromJust (b ! pos)) /= c
+                         )
                   -- en passantable
                   enPassant :: Position -> Bool
                   enPassant pos@(tx, ty) =
-                    let qp = b ! pos
-                     in onBoard pos
-                          && ( not (null h) && case head h of -- en passant
-                                 SMove (Piece Pawn c2) from to ->
-                                   c2 /= c && from == (tx, ty + forward) && to == (tx, ty - forward)
-                                 _ -> False
-                             )
+                    onBoard pos
+                      && ( not (null h) && case head h of -- en passant
+                             SMove (Piece Pawn c2) from to ->
+                               c2 /= c
+                                 && from == (tx, ty + forward)
+                                 && to == (tx, ty - forward)
+                             _ -> False
+                         )
                   -- expand moves that promote(only standard moves, en passant does not go to last rank)
                   expandPromotionMoves :: Move -> [Move]
                   expandPromotionMoves m@(SMove p@(Piece Pawn c) from to@(x, y)) =
                     if (c == W && y == 8) || (c == B && y == 1)
-                      then map (\pt -> Promotion (Piece pt c) from to) [Queen, Rook, Bishop, Knight]
+                      then
+                        map
+                          (\pt -> Promotion (Piece pt c) from to)
+                          [ Queen,
+                            Rook,
+                            Bishop,
+                            Knight
+                          ]
                       else [m]
                   expandPromotionMoves m = [m]
               -- knight just translate all possible and filter out invalid
@@ -352,16 +385,28 @@ genPsuedoMovesPos gs pos@(f, r) =
                 map
                   (SMove p pos)
                   ( filter (\x -> onBoard x && notBlocked x) $
-                      [translate pos (x, y) | x <- [-1 .. 1], y <- [-1 .. 1], (x, y) /= (0, 0)]
+                      [ translate pos (x, y)
+                        | x <- [-1 .. 1],
+                          y <- [-1 .. 1],
+                          (x, y) /= (0, 0)
+                      ]
                   )
           where
             forward = if c == W then 1 else -1
             -- uses translations to generate all reachable moves(sliding)
             reachable :: [Position] -> [Move]
-            reachable = concatMap (\(x, y) -> map (SMove (Piece pt pc) pos) (accReachable c b pos (x, y) []))
+            reachable =
+              concatMap
+                ( \(x, y) ->
+                    map
+                      (SMove (Piece pt pc) pos)
+                      (accReachable c b pos (x, y) [])
+                )
             -- checks if a position is not blocked by a friendly piece
             notBlocked :: Position -> Bool
-            notBlocked pos = isNothing (b ! pos) || pieceColor (fromJust (b ! pos)) /= c
+            notBlocked pos =
+              isNothing (b ! pos)
+                || pieceColor (fromJust (b ! pos)) /= c
             -- translate a position
             translate :: Position -> Position -> Position
             translate (x, y) (x', y') = (x + x', y + y')
@@ -392,7 +437,9 @@ genCastleMoves gs =
             ( any
                 ( \case
                     -- no friendly piece has moved from this position and no other piece has moved here
-                    SMove p@(Piece pt qc) from to -> (c == qc && from == pos) || to == pos
+                    SMove p@(Piece pt qc) from to ->
+                      (c == qc && from == pos)
+                        || to == pos
                     -- no enemy pawn has moved here through special promotion move
                     Promotion p@(Piece pt qc) from to -> to == pos
                     _ -> False
@@ -437,8 +484,18 @@ genCastleMoves gs =
                          ]
                   )
             )
-   in [ShortCastle c | not (inCheck gs) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear]
-        ++ [LongCastle c | not (inCheck gs) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
+   in [ ShortCastle c
+        | not (inCheck gs)
+            && kingNotMoved
+            && rookValid (8, if c == W then 1 else 8)
+            && shortCastleClear
+      ]
+        ++ [ LongCastle c
+             | not (inCheck gs)
+                 && kingNotMoved
+                 && rookValid (1, if c == W then 1 else 8)
+                 && longCastleClear
+           ]
 
 -- generate all psuedo moves(no check checks)
 -- only for checking if a move puts you in check
@@ -450,7 +507,12 @@ genPsuedoMoves gs =
 -- generate all legal moves for a color in a position
 generateMoves :: GameState -> [Move]
 generateMoves gs@(GameState p h cap board) =
-  concatMap (filter (not . inCheck . GameState p h cap . updateBoard board) . genPsuedoMovesPos gs) (indices board)
+  concatMap
+    ( filter
+        (not . inCheck . GameState p h cap . updateBoard board)
+        . genPsuedoMovesPos gs
+    )
+    (indices board)
     ++ genCastleMoves gs
 
 -- update board with a move
