@@ -571,15 +571,15 @@ updateBoard board m = case m of
   SMove p from to -> board // [(to, Just p), (from, Nothing)] -- normal moves
   ShortCastle c ->
     board
-      // [ ((7, if c == W then 1 else 8), Just $ Piece King W),
-           ((6, if c == W then 1 else 8), Just $ Piece Rook W),
+      // [ ((7, if c == W then 1 else 8), Just $ Piece King c),
+           ((6, if c == W then 1 else 8), Just $ Piece Rook c),
            ((5, if c == W then 1 else 8), Nothing),
            ((8, if c == W then 1 else 8), Nothing) -- short castle
          ]
   LongCastle c ->
     board
-      // [ ((3, if c == W then 1 else 8), Just $ Piece King W),
-           ((4, if c == W then 1 else 8), Just $ Piece Rook W),
+      // [ ((3, if c == W then 1 else 8), Just $ Piece King c),
+           ((4, if c == W then 1 else 8), Just $ Piece Rook c),
            ((5, if c == W then 1 else 8), Nothing),
            ((1, if c == W then 1 else 8), Nothing) -- long castle
          ]
