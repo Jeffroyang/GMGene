@@ -108,7 +108,7 @@ parseEnPassant c =
     *> wsP
       ( liftA3
           EnPassant
-          (parsePiece c)
+          (pure $ Piece Pawn c)
           parsePosition
           parsePosition
       )

@@ -23,7 +23,6 @@ testParsePiece =
 
 -- >>> runTestTT testParsePosition
 -- Counts {cases = 9, tried = 9, errors = 0, failures = 0}
-testParsePosition :: Test
 testParsePosition =
   TestList
     [ "Parse position 1" ~: P.parse parsePosition "a1" ~?= Right (1, 1),
@@ -83,20 +82,19 @@ testParsePromotion =
       "Parse promotion invalid" ~: P.parse (parsePromotion W) "^X e6 e8" ~?= Left "No parses"
     ]
 
-instance Arbitrary Color where
-  arbitrary = elements [W, B]
+-- >>> runTestTT testParseEnPassant
+-- Counts {cases = 2, tried = 2, errors = 0, failures = 2}
 
-instance Arbitrary PieceType where
-  arbitrary = elements [King, Queen, Rook, Bishop, Knight, Pawn]
-
-instance Arbitrary Piece where
-  arbitrary = do
-    c <- arbitrary
-    t <- arbitrary
-    return $ Piece t c
+testParseEnPassant :: Test
+testParseEnPassant =
+  TestList
+    [ "Parse en passant 1" ~: P.parse (parseEnPassant W) "ep e5 d6" ~?= Right (EnPassant (Piece Pawn W) (5, 5) (4, 6)),
+      "Parse en passant 2" ~: P.parse (parseEnPassant B) "ep e6 d5" ~?= Right (EnPassant (Piece Pawn B) (5, 6) (4, 5))
+    ]
 
 data BoundedPosition = BoundedPosition Int Int deriving (Show)
 
+-- | Generate a bounded position between (1, 1) and (8, 8)
 instance Arbitrary BoundedPosition where
   arbitrary = do
     x <- elements [1 .. 8]
@@ -116,12 +114,12 @@ prop_roundtrip_standard_move p (BoundedPosition x y) (BoundedPosition x' y') =
     (printPiece p ++ " " ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
     == Right (SMove p (x, y) (x', y'))
 
-prop_roundtrip_en_passant :: Piece -> BoundedPosition -> BoundedPosition -> Bool
-prop_roundtrip_en_passant p (BoundedPosition x y) (BoundedPosition x' y') =
+prop_roundtrip_en_passant :: Color -> BoundedPosition -> BoundedPosition -> Bool
+prop_roundtrip_en_passant c (BoundedPosition x y) (BoundedPosition x' y') =
   P.parse
-    (parseEnPassant (pieceColor p))
-    ("ep " ++ printPiece p ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
-    == Right (EnPassant p (x, y) (x', y'))
+    (parseEnPassant c)
+    ("ep " ++ printPosition (x, y) ++ " " ++ printPosition (x', y'))
+    == Right (EnPassant (Piece Pawn c) (x, y) (x', y'))
 
 prop_roundtrip_promotion :: Piece -> BoundedPosition -> BoundedPosition -> Bool
 prop_roundtrip_promotion p (BoundedPosition x y) (BoundedPosition x' y') =
@@ -139,7 +137,8 @@ test_all =
         "Parse standard move" ~: testParseStandardMove,
         "Parse long castle" ~: testParseLongCastle,
         "Parse short castle" ~: testParseShortCastle,
-        "Parse promotion" ~: testParsePromotion
+        "Parse promotion" ~: testParsePromotion,
+        "Parse en passant" ~: testParseEnPassant
       ]
 
 qc :: IO ()

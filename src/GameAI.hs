@@ -28,6 +28,7 @@ minimaxSearch g d
   where
     p = player g
 
+-- | Minimax for the maximizing player
 maxi :: (SearchableGame g) => g -> Player g -> Int -> Int
 maxi g p 0 = evaluate g p
 maxi g p d =
@@ -37,6 +38,7 @@ maxi g p d =
       [] -> evaluate g p
       ms -> maximum (map (\m -> mini (update g m) p (d - 1)) ms)
 
+-- | Minimax for the minimizing player
 mini :: (SearchableGame g) => g -> Player g -> Int -> Int
 mini g p 0 = evaluate g p
 mini g p d =
@@ -51,17 +53,18 @@ negamaxSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
 negamaxSearch g d
   | d <= 0 = error "Cannot search to depth < 0"
   | otherwise = maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) (generateMoves g))
+
+-- | Negamax for the maximizing players alternates every level
+negamax :: (SearchableGame g) => g -> Int -> Int
+negamax g 0 = evaluate g p where p = player g
+negamax g d =
+  if gameOver g
+    then evaluate g p
+    else case generateMoves g of
+      [] -> evaluate g p
+      ms -> maximum (map (\m -> -(negamax (update g m) (d - 1))) ms)
   where
-    negamax :: (SearchableGame g) => g -> Int -> Int
-    negamax g 0 = evaluate g p where p = player g
-    negamax g d =
-      if gameOver g
-        then evaluate g p
-        else case generateMoves g of
-          [] -> evaluate g p
-          ms -> maximum (map (\m -> -(negamax (update g m) (d - 1))) ms)
-      where
-        p = player g
+    p = player g
 
 -- | Search the tree for the best move up to a certain depth tracking alpha and beta
 -- Alpha is the best value that the maximizing player can currently guarantee at that level or above

@@ -115,6 +115,18 @@ instance Show GameState where
       ++ "Current Player: "
       ++ show player
 
+instance Arbitrary Color where
+  arbitrary = elements [W, B]
+
+instance Arbitrary PieceType where
+  arbitrary = elements [King, Queen, Rook, Bishop, Knight, Pawn]
+
+instance Arbitrary Piece where
+  arbitrary = do
+    c <- arbitrary
+    t <- arbitrary
+    return $ Piece t c
+
 instance Arbitrary GameState where
   arbitrary :: Gen GameState
   -- simulate random number of turns (up to 100) to get a random board
