@@ -16,4 +16,6 @@ main = do
   putStrLn "*** Testing Simple Evaluation ***"
   CSAT.test_all
   CSAT.qc
+  putStrLn "*** Testing Game AI ***"
+  GAT.qc
   return ()

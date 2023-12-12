@@ -85,3 +85,10 @@ simulateGameAsWhite g algo depth steps =
 -- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 4 52
 -- WhiteWin
 -- (21.53 secs, 118,525,111,368 bytes)
+
+qc :: IO ()
+qc = do
+  quickCheck prop_minimaxDepthOne
+  quickCheck prop_negamaxSearch
+  quickCheck prop_AlphaBetaPrunedSearch
+  return ()
