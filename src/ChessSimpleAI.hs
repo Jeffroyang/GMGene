@@ -15,6 +15,14 @@ import GameAI qualified as G
 -- https://www.chessprogramming.org/Simplified_Evaluation_Function
 -- All values are in terms of white's perspective, black's values are the negative of white's
 
+{-
+Piece Values
+------------
+The following function gives the piece value of different pieces on the
+board. By default, piece value is in the perspective of White and values
+are mirrored for the black player
+-}
+
 -- | Returns the value of a piece
 pieceValue :: Piece -> Int
 pieceValue (Piece Pawn c) = if c == W then 100 else -100
@@ -23,6 +31,15 @@ pieceValue (Piece Bishop c) = if c == W then 330 else -330
 pieceValue (Piece Rook c) = if c == W then 500 else -500
 pieceValue (Piece Queen c) = if c == W then 900 else -900
 pieceValue (Piece King c) = if c == W then 20000 else -20000
+
+{-
+Piece Square Tables
+-------------------
+The following tables give positional value to different pieces on the board.
+For example, looking at the value of the pawn piece square table, if a white
+pawn is on square (2, 2) then it gains a value of 5 for the white player. The
+values are mirroed for the black player.
+-}
 
 pawnPST :: Array (Int, Int) Int
 pawnPST =
@@ -104,6 +121,7 @@ queenPST =
         ]
     )
 
+-- | Piece-square table for the king in the midgame
 kingPSTMidgame :: Array (Int, Int) Int
 kingPSTMidgame =
   listArray
@@ -120,6 +138,7 @@ kingPSTMidgame =
         ]
     )
 
+-- | Piece-square table for the king in the endgame
 kingPSTEndgame :: Array (Int, Int) Int
 kingPSTEndgame =
   listArray
@@ -145,11 +164,11 @@ evaluatePieceValues counts =
 
 -- | Returns the count of each piece on the board
 getPieceCounts :: Board -> M.Map Piece Int
-getPieceCounts board = M.fromListWith (+) (map (\p -> (p, 1)) (catMaybes (elems board)))
+getPieceCounts board = M.fromListWith (+) (map (,1) (catMaybes (elems board)))
 
--- | checks if we are in the endgame
--- "Both sides have no queens or every side which has a queen has additionally
--- no other pieces or one minorpiece maximum."
+-- | checks if we are in the endgame if either of the following conditions are met:
+-- "Both sides have no queens"
+-- "Every side which has a queen has additionally no other pieces or one minorpiece maximum."
 isEndgame :: M.Map Piece Int -> Bool
 isEndgame counts =
   (whiteQueenCount == 0 || whiteMinorCount <= 1)
@@ -160,7 +179,7 @@ isEndgame counts =
     blackMinorCount = fromMaybe 0 (counts !? Piece Knight B) + fromMaybe 0 (counts !? Piece Bishop B)
     whiteMinorCount = fromMaybe 0 (counts !? Piece Knight W) + fromMaybe 0 (counts !? Piece Bishop W)
 
--- | returns the mirrored position of a position
+-- | returns the mirrored position
 getMirrorPosition :: (Int, Int) -> (Int, Int)
 getMirrorPosition (x, y) = (8 - x + 1, 8 - y + 1)
 
@@ -196,7 +215,7 @@ evaluatePST board endgame =
               else -kingPST ! getMirrorPosition pos
    in sum (map getVal (assocs board))
 
--- | Returns the total value of a board
+-- | Returns the total value of a board from the perspective of the given player
 simpleEval :: GameState -> Player -> Int
 simpleEval gs perspective =
   let b = board gs

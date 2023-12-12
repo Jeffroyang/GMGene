@@ -113,6 +113,7 @@ parseEnPassant c =
           parsePosition
       )
 
+-- | Piece printing for roundtrip testing
 printPiece :: Piece -> String
 printPiece (Piece King _) = "K"
 printPiece (Piece Queen _) = "Q"
@@ -121,6 +122,7 @@ printPiece (Piece Bishop _) = "B"
 printPiece (Piece Knight _) = "N"
 printPiece (Piece Pawn _) = "P"
 
+-- | Position printing for roundtrip testing
 printPosition :: Position -> String
 printPosition (x, y)
   | x >= 1 && x <= 8 && y >= 1 && y <= 8 =

@@ -20,7 +20,7 @@ playGame = do
   putStrLn "  Long castle: \"OOO\""
   putStrLn "  Promotion: \"^Q a7 a8\" (Pawn from a7 to a8, promoting to Queen)"
   putStrLn "  En passant: \"ep a5 b6\" (Pawn from a5 to b6, capturing en passant)"
-  putStrLn "  The abbreviated pieces are K (King), Q (Queen), R (Rook), B (Bishop), N (Knight), and P (Pawn)"
+  putStrLn "  The abbreviated pieces are K (King), Q (Queen), R (Rook), B (Bishop), N (Knight), and P (Pawn)\n"
   putStrLn "Would you like to play against the computer? (Y/N)"
   ai <- getLine
   case ai of
@@ -78,7 +78,7 @@ playGameHuman g = do
 -- | Get search depth from user
 getSearchDepth :: IO Int
 getSearchDepth = do
-  putStr "Enter search depth (1-3):"
+  putStr "Enter search depth (1-4):"
   depth <- getLine
   let parsedDepth = readMaybe depth :: Maybe Int
   case parsedDepth of
@@ -86,7 +86,7 @@ getSearchDepth = do
       putStrLn "Invalid depth!"
       getSearchDepth
     Just d ->
-      if d >= 1 && d <= 3
+      if d >= 1 && d <= 4
         then return d
         else do
           putStrLn "Invalid depth!"
