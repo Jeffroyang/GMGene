@@ -32,7 +32,14 @@ import Test.QuickCheck (Arbitrary (..), Gen, choose, elements, shrink)
 
 data Color = B | W deriving (Show, Eq, Ord)
 
-data PieceType = King | Queen | Rook | Bishop | Knight | Pawn deriving (Show, Eq, Ord)
+data PieceType
+  = King
+  | Queen
+  | Rook
+  | Bishop
+  | Knight
+  | Pawn
+  deriving (Show, Eq, Ord)
 
 -- | row col representation of a position for easier translation
 type Position = (Int, Int)
@@ -120,8 +127,14 @@ showBoard board =
         let showPiece :: Maybe Piece -> String
             showPiece Nothing = "   "
             showPiece (Just p) = " " ++ show p ++ " "
-         in show r ++ " |" ++ concatMap (\c -> showPiece (board ! (c, r)) ++ "|") [1 .. 8] ++ "\n"
-   in frameRow ++ intercalate frameRow (map showRow [8, 7 .. 1]) ++ frameRow ++ "    a   b   c   d   e   f   g   h\n"
+         in show r
+              ++ " |"
+              ++ concatMap (\c -> showPiece (board ! (c, r)) ++ "|") [1 .. 8]
+              ++ "\n"
+   in frameRow
+        ++ intercalate frameRow (map showRow [8, 7 .. 1])
+        ++ frameRow
+        ++ "    a   b   c   d   e   f   g   h\n"
 
 data Result = BlackWin | WhiteWin | Draw | InProgress deriving (Show, Eq)
 
@@ -215,9 +228,11 @@ inCheck gs =
           ( \case
               -- for most pieces standard moves represent attack range, except pawns which attack diagonally
               -- need to filter out advance moves
-              SMove p@(Piece pt _) from@(x, y) to@(x', y') -> if pt == Pawn then if x /= x' then to else (0, 0) else to
+              SMove p@(Piece pt _) from@(x, y) to@(x', y') ->
+                if pt == Pawn then if x /= x' then to else (0, 0) else to
               -- same with promotions
-              Promotion _ from@(x, y) to@(x', y') -> if x /= x' then to else (0, 0)
+              Promotion _ from@(x, y) to@(x', y') ->
+                if x /= x' then to else (0, 0)
               _ -> (0, 0) -- dummy value for other possible enemy moves since they dont attack
           )
           (genPsuedoMoves $ GameState (if p == W then B else W) h cap b)
@@ -280,7 +295,8 @@ genPsuedoMovesPos gs pos@(f, r) =
                     let qp = b ! pos
                      in onBoard pos
                           && ( not (null h) && case head h of -- en passant
-                                 SMove (Piece Pawn c2) from to -> c2 /= c && from == (tx, ty + forward) && to == (tx, ty - forward)
+                                 SMove (Piece Pawn c2) from to ->
+                                   c2 /= c && from == (tx, ty + forward) && to == (tx, ty - forward)
                                  _ -> False
                              )
                   -- expand moves that promote(only standard moves, en passant does not go to last rank)
@@ -294,11 +310,43 @@ genPsuedoMovesPos gs pos@(f, r) =
               Knight ->
                 map (SMove p pos) $
                   filter (\x -> onBoard x && notBlocked x) $
-                    map (translate pos) [(-2, -1), (-1, -2), (1, -2), (2, -1), (-2, 1), (-1, 2), (1, 2), (2, 1)]
+                    map
+                      (translate pos)
+                      [ (-2, -1),
+                        (-1, -2),
+                        (1, -2),
+                        (2, -1),
+                        (-2, 1),
+                        (-1, 2),
+                        (1, 2),
+                        (2, 1)
+                      ]
               -- for straight sliding pieces, generate all reachable positions along a translation dir
-              Bishop -> reachable [(1, 1), (-1, 1), (1, -1), (-1, -1)]
-              Rook -> reachable [(1, 0), (-1, 0), (0, 1), (0, -1)]
-              Queen -> reachable [(1, 1), (-1, 1), (1, -1), (-1, -1), (1, 0), (-1, 0), (0, 1), (0, -1)]
+              Bishop ->
+                reachable
+                  [ (1, 1),
+                    (-1, 1),
+                    (1, -1),
+                    (-1, -1)
+                  ]
+              Rook ->
+                reachable
+                  [ (1, 0),
+                    (-1, 0),
+                    (0, 1),
+                    (0, -1)
+                  ]
+              Queen ->
+                reachable
+                  [ (1, 1),
+                    (-1, 1),
+                    (1, -1),
+                    (-1, -1),
+                    (1, 0),
+                    (-1, 0),
+                    (0, 1),
+                    (0, -1)
+                  ]
               -- king same as knight
               King ->
                 map
@@ -357,16 +405,40 @@ genCastleMoves gs =
         isNothing (b ! (6, if c == W then 1 else 8))
           && isNothing (b ! (7, if c == W then 1 else 8))
           && not (inCheck gs) -- currently not in check
-          && not (inCheck $ GameState c h cap (b // [((6, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at f1/8
-          -- long castle path clear
+          && not
+            ( inCheck $
+                GameState
+                  c
+                  h
+                  cap
+                  ( b
+                      // [ ((6, if c == W then 1 else 8), Just $ Piece King c),
+                           ((5, if c == W then 1 else 8), Nothing) -- not in check at f1/8
+                           -- long castle path clear
+                         ]
+                  )
+            )
+
       longCastleClear :: Bool
       longCastleClear =
         isNothing (b ! (4, if c == W then 1 else 8))
           && isNothing (b ! (3, if c == W then 1 else 8))
           && isNothing (b ! (2, if c == W then 1 else 8))
           && not (inCheck gs) -- currently not in check
-          && not (inCheck $ GameState c h cap (b // [((4, if c == W then 1 else 8), Just $ Piece King c), ((5, if c == W then 1 else 8), Nothing)])) -- not in check at d1/8
-   in [ShortCastle c | not (inCheck gs) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear] ++ [LongCastle c | not (inCheck gs) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
+          && not
+            ( inCheck $
+                GameState
+                  c
+                  h
+                  cap
+                  ( b
+                      // [ ((4, if c == W then 1 else 8), Just $ Piece King c),
+                           ((5, if c == W then 1 else 8), Nothing) -- not in check at d1/8
+                         ]
+                  )
+            )
+   in [ShortCastle c | not (inCheck gs) && kingNotMoved && rookValid (8, if c == W then 1 else 8) && shortCastleClear]
+        ++ [LongCastle c | not (inCheck gs) && kingNotMoved && rookValid (1, if c == W then 1 else 8) && longCastleClear]
 
 -- generate all psuedo moves(no check checks)
 -- only for checking if a move puts you in check
@@ -377,13 +449,36 @@ genPsuedoMoves gs =
 
 -- generate all legal moves for a color in a position
 generateMoves :: GameState -> [Move]
-generateMoves gs@(GameState p h cap board) = concatMap (filter (not . inCheck . GameState p h cap . updateBoard board) . genPsuedoMovesPos gs) (indices board) ++ genCastleMoves gs
+generateMoves gs@(GameState p h cap board) =
+  concatMap (filter (not . inCheck . GameState p h cap . updateBoard board) . genPsuedoMovesPos gs) (indices board)
+    ++ genCastleMoves gs
 
 -- update board with a move
 updateBoard :: Board -> Move -> Board
 updateBoard board m = case m of
   SMove p from to -> board // [(to, Just p), (from, Nothing)] -- normal moves
-  ShortCastle c -> board // [((7, if c == W then 1 else 8), Just $ Piece King W), ((6, if c == W then 1 else 8), Just $ Piece Rook W), ((5, if c == W then 1 else 8), Nothing), ((8, if c == W then 1 else 8), Nothing)] -- short castle
-  LongCastle c -> board // [((3, if c == W then 1 else 8), Just $ Piece King W), ((4, if c == W then 1 else 8), Just $ Piece Rook W), ((5, if c == W then 1 else 8), Nothing), ((1, if c == W then 1 else 8), Nothing)] -- long castle
-  Promotion p from to -> board // [(to, Just p), (from, Nothing)] -- promotion moves(same as normal)
-  EnPassant p@(Piece _ c) from to@(x, y) -> board // [(to, Just p), (from, Nothing), ((x, y - if c == W then 1 else -1), Nothing)] -- en passant moves
+  ShortCastle c ->
+    board
+      // [ ((7, if c == W then 1 else 8), Just $ Piece King W),
+           ((6, if c == W then 1 else 8), Just $ Piece Rook W),
+           ((5, if c == W then 1 else 8), Nothing),
+           ((8, if c == W then 1 else 8), Nothing) -- short castle
+         ]
+  LongCastle c ->
+    board
+      // [ ((3, if c == W then 1 else 8), Just $ Piece King W),
+           ((4, if c == W then 1 else 8), Just $ Piece Rook W),
+           ((5, if c == W then 1 else 8), Nothing),
+           ((1, if c == W then 1 else 8), Nothing) -- long castle
+         ]
+  Promotion p from to ->
+    board
+      // [ (to, Just p),
+           (from, Nothing) -- promotion moves(same as normal)
+         ]
+  EnPassant p@(Piece _ c) from to@(x, y) ->
+    board
+      // [ (to, Just p),
+           (from, Nothing),
+           ((x, y - if c == W then 1 else -1), Nothing) -- en passant moves
+         ]

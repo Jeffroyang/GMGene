@@ -1,40 +1,47 @@
-# project-cis5520
+# GM Gene
 
-This is an "Empty project" for Haskell. It is configured in the same way as
-the lecture demo and homework assignments for CIS 5520, but contains no
-code. Feel free to use this repository for experimentation!
+![](img/game1.png)
 
-If you want to change the name of this project, look for all occurrences of
-`project-cis5520` in the `project-cis5520.cabal` file and in the `hie.yaml` 
-file. (And change the name of the cabal file to match your new name!)
+By Gene Liu(geneliu) and Jeffrey Yang(yjeffrey)
 
-## Module organization
+This project implements a basic Chess game and engine in Haskell. The game is played in the terminal using a simple ASCII frontend, and has both a 2 player mode and a human vs computer mode. The computer implements a minimax algorithm with a simple evaluation function to determine its next move.
 
-Haskell packages typically divide their source code into three separate places:
+## Project Structure
 
-  - The bulk of your code should be developed as a reusable library in 
-    modules in the `src` directory. We've created [Lib.hs](src/Lib.hs) 
-    for you to get started. You can add additional modules here.
-    If you do add new modules to this directory you should list them
-    in the [cabal file](https://github.com/upenn-cis5520/empty-project/blob/74ad761562bb89d20e99621a76f607048a09f62e/project-cis5520.cabal#L44).
-  
-  - The entry point for your executable is in [Main.hs](app/Main.hs). 
-  
-  - All of your test cases should be in [the test directory](test/Spec.hs).
+The project is structured as follows:
 
-## Building, running, and testing
+### Source Files
 
-This project compiles with `stack build`. 
+- `src/Chess.hs` implements the core Chess game logic and data structures. This includes all board operations involving move checking, move generation, board updating, and board printing. It also includes testing support with random legal board position generation.
+
+- `src/ChessSimpleAI.hs` includes a simple positional evaluation function for Chess and abstracts the Chess game to a searchable game compatible with the minimax solver.
+
+- `src/GameAI.hs` implements the minimax and negamax algorithms with alpha-beta pruning to search for the best move for the computer to make.
+
+- `src/Parser.hs` is a copy of the parser from lecture.
+
+- `src/ChessParser.hs` implements a simple parser for Chess moves. Note that this is not perform algebraic chess notation parsing and disambiguation, as this was not the focus of the project.
+
+- `src/ChessPlay.hs` implements the main game loops and player interaction components.
+
+### Test Files
+
+- `test/ChessTest.hs` contains unit and quickcheck property tests for the Chess game logic.
+
+- `test/ChessSimpleAITest.hs` tests the simple Chess positional evaluation function with both unit and quickcheck property tests.
+
+- `test/GameAITest.hs` defined property tests for the minimax and negamax algorithms.
+
+- `test/ChessParserTest.hs` contains unit and quickcheck tests for the Chess move parser.
+
+- `test/Spec.hs` simply wraps and runs all tests in the module.
+
+## Usage
+
+Note that this project requires the Haskell [Array](https://hackage.haskell.org/package/array) package in order to compile and run. It is included as a dependency in the `gm-gene.cabal` file.
+
+This project compiles with `stack build`.
 You can run the main executable with `stack run`.
-You can run the tests with `stack test`. 
+You can run the tests with `stack test`.
 
 Finally, you can start a REPL with `stack ghci`.
-
-## Importing additional libraries
-
-This project is designed to run with stackage: you can easily use any library
-in https://www.stackage.org/lts-21.6 by adding an entry to the
-`build-depends` list of the `common-stanza` in the [cabal file](https://github.com/upenn-cis5520/empty-project/blob/837c81b6317cc11b824e2b5e87fd72eec1b2151e/project-cis5520.cabal#L23). If you want to
-use a library that is not on stackage, you'll need to update the common-stanza
-*and* add information to `stack.yaml` about where to find that library.
-
