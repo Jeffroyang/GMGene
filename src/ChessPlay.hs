@@ -49,7 +49,7 @@ getPlayerColor = do
 getUserMove :: GameState -> IO C.Move
 getUserMove g = do
   let p = player g
-  putStr "Enter a move:"
+  putStrLn "Enter a move:"
   move <- getLine
   let parsedMove = P.parse (parseChessMove p) move
   case parsedMove of
@@ -78,7 +78,7 @@ playGameHuman g = do
 -- | Get search depth from user
 getSearchDepth :: IO Int
 getSearchDepth = do
-  putStr "Enter search depth (1-4):"
+  putStrLn "Enter search depth (1-5):"
   depth <- getLine
   let parsedDepth = readMaybe depth :: Maybe Int
   case parsedDepth of
@@ -86,7 +86,7 @@ getSearchDepth = do
       putStrLn "Invalid depth!"
       getSearchDepth
     Just d ->
-      if d >= 1 && d <= 4
+      if d >= 1 && d <= 5
         then return d
         else do
           putStrLn "Invalid depth!"

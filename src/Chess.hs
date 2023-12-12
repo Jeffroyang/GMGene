@@ -88,17 +88,17 @@ data GameState = GameState
 instance Ord Move where
   compare :: Move -> Move -> Ordering
   compare Promotion {} Promotion {} = EQ
-  compare Promotion {} _ = GT
-  compare _ Promotion {} = LT
+  compare Promotion {} _ = LT
+  compare _ Promotion {} = GT
   compare EnPassant {} EnPassant {} = EQ
-  compare EnPassant {} _ = GT
-  compare _ EnPassant {} = LT
+  compare EnPassant {} _ = LT
+  compare _ EnPassant {} = GT
   compare ShortCastle {} ShortCastle {} = EQ
-  compare ShortCastle {} _ = GT
-  compare _ ShortCastle {} = LT
+  compare ShortCastle {} _ = LT
+  compare _ ShortCastle {} = GT
   compare LongCastle {} LongCastle {} = EQ
-  compare LongCastle {} _ = GT
-  compare _ LongCastle {} = LT
+  compare LongCastle {} _ = LT
+  compare _ LongCastle {} = GT
   compare SMove {} SMove {} = EQ
 
 instance Show GameState where

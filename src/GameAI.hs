@@ -9,7 +9,7 @@ import Data.Ord (comparing)
 
 -- | A searchable game is a game that can be searched using a tree
 -- Moves should be ordered by best to worst to speed up the search
-class (Ord (Move g)) => SearchableGame g where
+class SearchableGame g where
   type Move g
   type Player g
   update :: g -> Move g -> g -- Updates the game state with a move
@@ -23,12 +23,12 @@ type SearchAlgorithm g = g -> Int -> (Move g, Int)
 -- | Search the tree for the best move up to a certain depth
 minimaxSearch :: (SearchableGame g) => SearchAlgorithm g
 minimaxSearch g d
-  | d <= 0 = error "Cannot search to depth < 0"
-  | null moves = error "No moves available"
-  | otherwise = maximumBy (comparing snd) (map (\m -> (m, mini (update g m) p (d - 1))) moves)
+  | d <= 0 = error "Cannot search to depth <= 0"
+  | null ms = error "No moves available"
+  | otherwise = maximumBy (comparing snd) (map (\m -> (m, mini (update g m) p (d - 1))) ms)
   where
     p = player g
-    moves = generateMoves g
+    ms = generateMoves g
 
 -- | Minimax for the maximizing player
 maxi :: (SearchableGame g) => g -> Player g -> Int -> Int
@@ -50,33 +50,12 @@ mini g p d =
       [] -> evaluate g p
       ms -> minimum (map (\m -> maxi (update g m) p (d - 1)) ms)
 
--- | Search the tree for the best move up to a certain depth
-negamaxSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
-negamaxSearch g d
-  | d <= 0 = error "Cannot search to depth < 0"
-  | null moves = error "No moves available"
-  | otherwise = maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) moves)
-  where
-    moves = generateMoves g
-
--- | Negamax for the maximizing players alternates every level
-negamax :: (SearchableGame g) => g -> Int -> Int
-negamax g 0 = evaluate g (player g)
-negamax g d =
-  if gameOver g
-    then evaluate g p
-    else case generateMoves g of
-      [] -> evaluate g p
-      ms -> maximum (map (\m -> -(negamax (update g m) (d - 1))) ms)
-  where
-    p = player g
-
 -- | Search the tree for the best move up to a certain depth tracking alpha and beta
 -- Alpha is the best value that the maximizing player can currently guarantee at that level or above
 -- Beta is the best value that the minimizing player can currently guarantee at that level or above
 alphaBetaSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
 alphaBetaSearch g d
-  | d <= 0 = error "Cannot search to depth < 0"
+  | d <= 0 = error "Cannot search to depth <= 0"
   | otherwise = case moves of
       [] -> error "No moves available"
       ms@(m : _) -> foldl aux (m, minBound) ms
