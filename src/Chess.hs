@@ -122,15 +122,15 @@ instance Arbitrary GameState where
 showBoard :: Board -> String
 showBoard board =
   let frameRow = "  +---+---+---+---+---+---+---+---+\n"
+      showPiece :: Maybe Piece -> String
+      showPiece Nothing = "   "
+      showPiece (Just p) = " " ++ show p ++ " "
       showRow :: Int -> String
       showRow r =
-        let showPiece :: Maybe Piece -> String
-            showPiece Nothing = "   "
-            showPiece (Just p) = " " ++ show p ++ " "
-         in show r
-              ++ " |"
-              ++ concatMap (\c -> showPiece (board ! (c, r)) ++ "|") [1 .. 8]
-              ++ "\n"
+        show r
+          ++ " |"
+          ++ concatMap (\c -> showPiece (board ! (c, r)) ++ "|") [1 .. 8]
+          ++ "\n"
    in frameRow
         ++ intercalate frameRow (map showRow [8, 7 .. 1])
         ++ frameRow
