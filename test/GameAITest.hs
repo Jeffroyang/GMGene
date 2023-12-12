@@ -24,8 +24,8 @@ prop_negamaxSearch :: SmallInt -> C.GameState -> Property
 prop_negamaxSearch (SmallInt d) g =
   not (gameOver g) ==> snd (minimaxSearch g d) == snd (negamaxSearch g d)
 
-prop_AlphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
-prop_AlphaBetaPrunedSearch (SmallInt d) g =
+prop_alphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
+prop_alphaBetaPrunedSearch (SmallInt d) g =
   not (gameOver g) ==> snd (negamaxSearch g d) == snd (alphaBetaSearch g d)
 
 {-
@@ -52,6 +52,13 @@ simulateGameAsWhite g algo depth steps =
   where
     p = player g
     currDepth = if p == C.W then depth else 1
+
+qc :: IO ()
+qc = do
+  quickCheck prop_minimaxDepthOne
+  quickCheck prop_negamaxSearch
+  quickCheck prop_alphaBetaPrunedSearch
+  return ()
 
 -- >>> simulateGameAsWhite C.initBoard minimaxSearch 2 52
 -- WhiteWin
@@ -85,10 +92,3 @@ simulateGameAsWhite g algo depth steps =
 -- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 4 52
 -- WhiteWin
 -- (21.53 secs, 118,525,111,368 bytes)
-
-qc :: IO ()
-qc = do
-  quickCheck prop_minimaxDepthOne
-  quickCheck prop_negamaxSearch
-  quickCheck prop_AlphaBetaPrunedSearch
-  return ()
