@@ -27,3 +27,48 @@ prop_negamaxSearch (SmallInt d) g =
 prop_AlphaBetaPrunedSearch :: SmallInt -> C.GameState -> Property
 prop_AlphaBetaPrunedSearch (SmallInt d) g =
   not (gameOver g) ==> snd (negamaxSearch g d) == snd (alphaBetaSearch g d)
+
+{-
+Benchmarking
+------------
+We can benchmark the performance of the search algorithms by simulating a game
+to the end using the algorithms for both players. We can then compare the time
+it takes for each algorithm to win the game. Black plays with depth 1, white
+plays with depth d.
+-}
+
+-- simulate a game to the end running search algorithms for user specified depth
+-- black plays with depth 1, white plays with depth d
+simulateGameAsWhite :: C.GameState -> SearchAlgorithm C.GameState -> Int -> Int -> C.Result
+simulateGameAsWhite g algo depth steps =
+  if C.gameOver g || steps == 0
+    then C.checkResult g
+    else
+      simulateGameAsWhite
+        (update g (fst (algo g currDepth)))
+        algo
+        depth
+        (steps - 1)
+  where
+    p = player g
+    currDepth = if p == C.W then depth else 1
+
+-- >>> simulateGameAsWhite C.initBoard minimaxSearch 2 52
+-- WhiteWin
+-- (1.36 secs, 7,489,057,184 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 2 52
+-- WhiteWin
+-- (0.41 secs, 2,181,033,392 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard minimaxSearch 3 52
+-- WhiteWin
+-- (34.09 secs, 199,807,500,032 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 3 20
+-- WhiteWin
+-- (8.31 secs, 48,411,535,008 bytes)
+
+-- >>> simulateGameAsWhite C.initBoard alphaBetaSearch 4 52
+-- WhiteWin
+-- (8.31 secs, 48,411,535,008 bytes)

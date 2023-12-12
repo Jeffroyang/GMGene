@@ -18,8 +18,10 @@ class (Ord (Move g)) => SearchableGame g where
   generateMoves :: g -> [Move g] -- All the possible moves from a given game state
   player :: g -> Player g -- The player whose turn it is
 
+type SearchAlgorithm g = g -> Int -> (Move g, Int)
+
 -- | Search the tree for the best move up to a certain depth
-minimaxSearch :: forall g. (SearchableGame g) => g -> Int -> (Move g, Int)
+minimaxSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
 minimaxSearch g d
   | d <= 0 = error "Cannot search to depth < 0"
   | otherwise = maximumBy (comparing snd) (map (\m -> (m, mini (update g m) p (d - 1))) (generateMoves g))
@@ -45,7 +47,7 @@ mini g p d =
       ms -> minimum (map (\m -> maxi (update g m) p (d - 1)) ms)
 
 -- | Search the tree for the best move up to a certain depth
-negamaxSearch :: forall g. (SearchableGame g) => g -> Int -> (Move g, Int)
+negamaxSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
 negamaxSearch g d
   | d <= 0 = error "Cannot search to depth < 0"
   | otherwise = maximumBy (comparing snd) (map (\m -> (m, -(negamax (update g m) (d - 1)))) (generateMoves g))
@@ -64,7 +66,7 @@ negamaxSearch g d
 -- | Search the tree for the best move up to a certain depth tracking alpha and beta
 -- Alpha is the best value that the maximizing player can currently guarantee at that level or above
 -- Beta is the best value that the minimizing player can currently guarantee at that level or above
-alphaBetaSearch :: forall g. (SearchableGame g) => g -> Int -> (Move g, Int)
+alphaBetaSearch :: forall g. (SearchableGame g) => SearchAlgorithm g
 alphaBetaSearch g d
   | d <= 0 = error "Cannot search to depth < 0"
   | otherwise = foldl aux (head initMoves, minBound) initMoves
